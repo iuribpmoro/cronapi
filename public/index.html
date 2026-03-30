@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI — Schedule HTTP Jobs in Seconds</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    header .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+
+    .hero { text-align: center; padding: 5rem 2rem 4rem; max-width: 800px; margin: 0 auto; }
+    .hero h1 { font-size: 3rem; font-weight: 800; line-height: 1.2; margin-bottom: 1.5rem; }
+    .hero h1 span { color: #58a6ff; }
+    .hero p { font-size: 1.25rem; color: #8b949e; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .cta { display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .btn { padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; }
+    .btn-outline { background: transparent; color: #58a6ff; border: 1px solid #30363d; }
+    .btn-outline:hover { background: #161b22; }
+
+    .code-demo { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem; text-align: left; max-width: 620px; margin: 3rem auto 0; font-family: 'Courier New', monospace; font-size: 0.875rem; line-height: 1.8; }
+    .code-demo .comment { color: #6e7681; }
+    .code-demo .key { color: #79c0ff; }
+    .code-demo .str { color: #a5d6ff; }
+    .code-demo .kw { color: #ff7b72; }
+
+    section { padding: 4rem 2rem; max-width: 1000px; margin: 0 auto; }
+    section h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 2.5rem; text-align: center; }
+
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1.5rem; }
+    .feature { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem; }
+    .feature .icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
+    .feature h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature p { font-size: 0.9rem; color: #8b949e; }
+
+    .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+    .plan { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 2rem; text-align: center; }
+    .plan.featured { border-color: #238636; }
+    .plan .price { font-size: 2.5rem; font-weight: 800; margin: 1rem 0 0.25rem; }
+    .plan .price span { font-size: 1rem; font-weight: 400; color: #8b949e; }
+    .plan .name { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+    .plan ul { list-style: none; margin: 1.5rem 0; text-align: left; }
+    .plan ul li { padding: 0.3rem 0; font-size: 0.9rem; color: #8b949e; }
+    .plan ul li::before { content: '✓ '; color: #3fb950; }
+
+    .waitlist { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 3rem 2rem; text-align: center; max-width: 500px; margin: 0 auto; }
+    .waitlist p { color: #8b949e; margin-bottom: 1.5rem; }
+    .waitlist form { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .waitlist input { flex: 1; min-width: 200px; padding: 0.65rem 1rem; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #e6edf3; font-size: 1rem; }
+    .waitlist input:focus { outline: none; border-color: #58a6ff; }
+    #waitlist-msg { margin-top: 1rem; font-size: 0.9rem; color: #3fb950; }
+
+    footer { border-top: 1px solid #21262d; text-align: center; padding: 2rem; color: #6e7681; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CronAPI</div>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="/health">Status</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <h1>Schedule HTTP jobs <span>without a server</span></h1>
+  <p>CronAPI triggers your endpoints on a cron schedule — no DevOps, no boilerplate. Register, get an API key, and start in minutes.</p>
+  <div class="cta">
+    <a href="#waitlist"><button class="btn btn-primary">Get early access</button></a>
+    <a href="#pricing"><button class="btn btn-outline">View pricing</button></a>
+  </div>
+
+  <div class="code-demo">
+    <div class="comment"># Register and get your API key</div>
+    <div><span class="kw">curl</span> -X POST https://cronapi.up.railway.app/api/v1/auth/register \</div>
+    <div>&nbsp;&nbsp;-d '{"email":"you@example.com"}'</div>
+    <br/>
+    <div class="comment"># Schedule a job — runs every hour</div>
+    <div><span class="kw">curl</span> -X POST https://cronapi.up.railway.app/api/v1/jobs \</div>
+    <div>&nbsp;&nbsp;-H <span class="str">"Authorization: Bearer ck_live_..."</span> \</div>
+    <div>&nbsp;&nbsp;-d '{</div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="str">"Ping my app"</span>,</div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"endpointUrl"</span>: <span class="str">"https://myapp.com/ping"</span>,</div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"cronExpression"</span>: <span class="str">"0 * * * *"</span></div>
+    <div>&nbsp;&nbsp;}'</div>
+  </div>
+</div>
+
+<section id="features">
+  <h2>Everything you need to schedule HTTP calls</h2>
+  <div class="features">
+    <div class="feature">
+      <div class="icon">⚡</div>
+      <h3>Simple REST API</h3>
+      <p>One API call to create a job. GET, POST, PUT, PATCH, DELETE — any HTTP method, custom headers, and body.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔒</div>
+      <h3>Secure API keys</h3>
+      <p>SHA-256 hashed keys, prefix-based lookup, and instant revocation. Your secrets never stored in plaintext.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">📊</div>
+      <h3>Execution history</h3>
+      <p>View response status, body, duration, and error logs for every job run. Know when something fails.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🔁</div>
+      <h3>Standard cron syntax</h3>
+      <p>Full cron expression support. Free plan runs hourly; upgrade for per-minute precision.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">💳</div>
+      <h3>Stripe-powered billing</h3>
+      <p>Self-serve upgrades and cancellations. Instant plan changes reflected in job limits.</p>
+    </div>
+    <div class="feature">
+      <div class="icon">🌐</div>
+      <h3>Zero infrastructure</h3>
+      <p>No servers to manage. No crontab to maintain. Register and let CronAPI handle the rest.</p>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <h2>Simple, transparent pricing</h2>
+  <div class="pricing">
+    <div class="plan">
+      <div class="name">Free</div>
+      <div class="price">$0 <span>/ month</span></div>
+      <ul>
+        <li>Up to 10 jobs</li>
+        <li>Hourly minimum interval</li>
+        <li>Execution history (50 entries)</li>
+        <li>Email support</li>
+      </ul>
+      <a href="#waitlist"><button class="btn btn-outline" style="width:100%">Get started</button></a>
+    </div>
+    <div class="plan featured">
+      <div class="name">Indie</div>
+      <div class="price">$9 <span>/ month</span></div>
+      <ul>
+        <li>Up to 100 jobs</li>
+        <li>Every minute scheduling</li>
+        <li>Full execution history</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="#waitlist"><button class="btn btn-primary" style="width:100%">Get early access</button></a>
+    </div>
+    <div class="plan">
+      <div class="name">Pro</div>
+      <div class="price">$29 <span>/ month</span></div>
+      <ul>
+        <li>Unlimited jobs</li>
+        <li>Every minute scheduling</li>
+        <li>Full execution history</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="#waitlist"><button class="btn btn-outline" style="width:100%">Get early access</button></a>
+    </div>
+  </div>
+</section>
+
+<section id="waitlist">
+  <div class="waitlist">
+    <h2>Join the waitlist</h2>
+    <p>We're in early access. Drop your email and we'll send you an API key as soon as a spot opens up.</p>
+    <form id="waitlist-form">
+      <input type="email" id="wl-email" placeholder="you@example.com" required />
+      <button type="submit" class="btn btn-primary">Notify me</button>
+    </form>
+    <div id="waitlist-msg"></div>
+  </div>
+</section>
+
+<footer>
+  <p>&copy; 2025 CronAPI. Built with love and cron jobs.</p>
+</footer>
+
+<script>
+  document.getElementById('waitlist-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('wl-email').value;
+    const msg = document.getElementById('waitlist-msg');
+    try {
+      const res = await fetch('/api/v1/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        msg.textContent = "You're on the list! We'll be in touch soon.";
+        msg.style.color = '#3fb950';
+      } else {
+        const data = await res.json();
+        msg.textContent = data.error ?? 'Something went wrong. Try again.';
+        msg.style.color = '#f85149';
+      }
+    } catch {
+      msg.textContent = 'Network error. Please try again.';
+      msg.style.color = '#f85149';
+    }
+  });
+</script>
+
+</body>
+</html>
