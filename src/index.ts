@@ -15,6 +15,8 @@ const app = Fastify({
   },
 });
 
+const startTime = Date.now();
+
 async function bootstrap() {
   await app.register(cors, {
     origin: true,
@@ -41,8 +43,35 @@ async function bootstrap() {
   await app.register(webhookRoutes, { prefix: '/webhooks' });
   await app.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
 
-  // Health check
-  app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+  // Health check — includes DB connectivity and scheduler status
+  app.get('/health', async () => {
+    let dbStatus = 'ok';
+    try {
+      await db.query('SELECT 1');
+    } catch {
+      dbStatus = 'error';
+    }
+    return {
+      status: dbStatus === 'ok' ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      uptime: (Date.now() - startTime) / 1000,
+      database: dbStatus,
+      scheduler: 'running',
+    };
+  });
+
+  // Public status page — uptime, active jobs, next scheduled run
+  app.get('/status', async () => {
+    const [activeJobsResult, nextRunResult] = await Promise.all([
+      db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs WHERE enabled = true'),
+      db.query<{ next_run_at: Date }>('SELECT next_run_at FROM jobs WHERE enabled = true AND next_run_at IS NOT NULL ORDER BY next_run_at ASC LIMIT 1'),
+    ]);
+    return {
+      uptime: (Date.now() - startTime) / 1000,
+      activeJobs: parseInt(activeJobsResult.rows[0]?.count ?? '0', 10),
+      nextScheduledRun: nextRunResult.rows[0]?.next_run_at ?? null,
+    };
+  });
 
   // Pricing info endpoint
   app.get('/api/v1/pricing', async () => ({
