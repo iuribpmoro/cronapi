@@ -3,6 +3,7 @@ import cronParser from 'cron-parser';
 import { db } from '../db/client';
 import { authenticate } from '../middleware/auth';
 import { getPlanLimits } from '../lib/limits';
+import { runJob } from '../lib/executeJob';
 
 interface Job {
   id: string;
@@ -298,6 +299,26 @@ export async function jobRoutes(app: FastifyInstance) {
           },
         },
       });
+    }
+  );
+
+  // POST /api/v1/jobs/:jobId/trigger
+  app.post<{ Params: { jobId: string } }>(
+    '/:jobId/trigger',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      const jobResult = await db.query<{
+        id: string; endpoint_url: string; http_method: string;
+        headers: Record<string, string>; body: string | null;
+        notify_url: string | null; max_retries: number;
+      }>(
+        'SELECT id, endpoint_url, http_method, headers, body, notify_url, max_retries FROM jobs WHERE id = $1 AND user_id = $2',
+        [request.params.jobId, request.user!.userId]
+      );
+      if (!jobResult.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+
+      const execution = await runJob(jobResult.rows[0]);
+      return reply.code(200).send({ execution });
     }
   );
 }

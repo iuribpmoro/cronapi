@@ -1,6 +1,11 @@
+import * as Sentry from '@sentry/node';
 import { buildApp } from './app';
 import { db } from './db/client';
 import { startScheduler } from './scheduler';
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
+}
 
 async function bootstrap() {
   const app = await buildApp();
