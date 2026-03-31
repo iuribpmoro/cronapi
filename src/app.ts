@@ -2,10 +2,12 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import staticFiles from '@fastify/static';
+import cookie from '@fastify/cookie';
 import path from 'path';
 import { authRoutes, waitlistRoutes } from './routes/auth';
 import { jobRoutes } from './routes/jobs';
 import { webhookRoutes } from './routes/webhooks';
+import { dashboardRoutes } from './routes/dashboard';
 import { db } from './db/client';
 import { logRequest } from './lib/usageTracking';
 
@@ -31,6 +33,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       error: 'Too many requests. Please slow down.',
     }),
   });
+
+  await app.register(cookie);
 
   if (process.env.NODE_ENV !== 'test') {
     await app.register(staticFiles, {
@@ -59,6 +63,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(jobRoutes, { prefix: '/api/v1/jobs' });
   await app.register(webhookRoutes, { prefix: '/webhooks' });
   await app.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
+  await app.register(dashboardRoutes, { prefix: '/dashboard' });
 
   app.get('/health', async () => {
     let dbStatus = 'ok';
