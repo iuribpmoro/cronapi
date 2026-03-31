@@ -48,9 +48,14 @@ export async function webhookRoutes(app: FastifyInstance) {
 
       switch (event.type) {
         case 'checkout.session.completed': {
-          const customerId = session.customer as string;
-          const subscriptionId = session.subscription as string;
-          const priceId = session.line_items?.data?.[0]?.price?.id ?? '';
+          // line_items are not expanded in the webhook payload by default;
+          // retrieve the session with expansion to get the price id.
+          const sessionWithItems = await stripe.checkout.sessions.retrieve(session.id, {
+            expand: ['line_items'],
+          });
+          const customerId = sessionWithItems.customer as string;
+          const subscriptionId = sessionWithItems.subscription as string;
+          const priceId = sessionWithItems.line_items?.data?.[0]?.price?.id ?? '';
 
           const indiePriceId = process.env.STRIPE_INDIE_PRICE_ID;
           const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
@@ -59,7 +64,7 @@ export async function webhookRoutes(app: FastifyInstance) {
           await db.query(
             `UPDATE users SET plan = $1, stripe_customer_id = $2, stripe_subscription_id = $3, updated_at = NOW()
              WHERE stripe_customer_id = $2 OR email = $4`,
-            [plan, customerId, subscriptionId, session.customer_details?.email ?? '']
+            [plan, customerId, subscriptionId, sessionWithItems.customer_details?.email ?? '']
           );
           break;
         }
