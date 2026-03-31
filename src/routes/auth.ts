@@ -82,3 +82,17 @@ export async function waitlistRoutes(app: FastifyInstance) {
     }
   });
 }
+
+// Admin routes — protected by ADMIN_SECRET header
+export async function adminRoutes(app: FastifyInstance) {
+  app.get('/waitlist', async (request, reply) => {
+    const secret = process.env.ADMIN_SECRET;
+    if (!secret || request.headers['x-admin-secret'] !== secret) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+    const result = await db.query<{ email: string; created_at: Date }>(
+      'SELECT email, created_at FROM waitlist ORDER BY created_at ASC'
+    );
+    return reply.send({ count: result.rows.length, emails: result.rows });
+  });
+}

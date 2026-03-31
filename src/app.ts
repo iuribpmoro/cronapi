@@ -4,7 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import staticFiles from '@fastify/static';
 import cookie from '@fastify/cookie';
 import path from 'path';
-import { authRoutes, waitlistRoutes } from './routes/auth';
+import { authRoutes, waitlistRoutes, adminRoutes } from './routes/auth';
 import { jobRoutes } from './routes/jobs';
 import { webhookRoutes } from './routes/webhooks';
 import { dashboardRoutes } from './routes/dashboard';
@@ -63,6 +63,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(jobRoutes, { prefix: '/api/v1/jobs' });
   await app.register(webhookRoutes, { prefix: '/webhooks' });
   await app.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
+  await app.register(adminRoutes, { prefix: '/api/v1/admin' });
   await app.register(dashboardRoutes, { prefix: '/dashboard' });
 
   app.get('/api/docs', async (request, reply) => {
