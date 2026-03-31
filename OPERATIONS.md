@@ -1,6 +1,6 @@
 # CronAPI Operations Guide
 
-Production URL: **https://cronapi-7b98.onrender.com**
+Production URL: **https://cronapi.hakinsight.com**
 
 ---
 
@@ -9,7 +9,7 @@ Production URL: **https://cronapi-7b98.onrender.com**
 ### Quick status
 
 ```
-GET https://cronapi-7b98.onrender.com/health
+GET https://cronapi.hakinsight.com/health
 ```
 
 Returns:
@@ -26,7 +26,7 @@ Returns:
 ### Detailed status (jobs + last error)
 
 ```
-GET https://cronapi-7b98.onrender.com/status
+GET https://cronapi.hakinsight.com/status
 ```
 
 Returns:

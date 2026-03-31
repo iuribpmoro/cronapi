@@ -180,11 +180,11 @@
 
   <div class="code-demo">
     <div class="comment"># 1. Register and get your API key</div>
-    <div><span class="kw">curl</span> -X POST https://cronapi.up.railway.app/api/v1/auth/register \</div>
+    <div><span class="kw">curl</span> -X POST https://cronapi.hakinsight.com/api/v1/auth/register \</div>
     <div>&nbsp;&nbsp;-d '{"email":"you@example.com"}'</div>
     <br/>
     <div class="comment"># 2. Schedule a job — runs every hour</div>
-    <div><span class="kw">curl</span> -X POST https://cronapi.up.railway.app/api/v1/jobs \</div>
+    <div><span class="kw">curl</span> -X POST https://cronapi.hakinsight.com/api/v1/jobs \</div>
     <div>&nbsp;&nbsp;-H <span class="str">"Authorization: Bearer cron_live_..."</span> \</div>
     <div>&nbsp;&nbsp;-d '{</div>
     <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="str">"Ping my app"</span>,</div>
