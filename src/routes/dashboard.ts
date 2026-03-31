@@ -124,11 +124,12 @@ function layout(title: string, body: string, user?: { email: string; plan: strin
 <body>
   <nav>
     <a href="/dashboard" class="brand">Cron<span>API</span> Dashboard</a>
-    ${user ? `<div class="nav-right">
-      <span>${user.email}</span>
+    <div class="nav-right">
+      <a href="/api/docs" target="_blank" rel="noopener">API Docs</a>
+      ${user ? `<span>${user.email}</span>
       <span class="badge badge-active" style="text-transform:capitalize;">${user.plan}</span>
-      <a href="/dashboard/logout">Logout</a>
-    </div>` : ''}
+      <a href="/dashboard/logout">Logout</a>` : ''}
+    </div>
   </nav>
   <div class="container">
     ${body}

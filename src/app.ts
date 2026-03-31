@@ -65,6 +65,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
   await app.register(dashboardRoutes, { prefix: '/dashboard' });
 
+  app.get('/api/docs', async (request, reply) => {
+    return reply.redirect('/docs.html');
+  });
+
   app.get('/health', async () => {
     let dbStatus = 'ok';
     try {

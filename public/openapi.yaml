@@ -1,0 +1,887 @@
+openapi: 3.0.3
+info:
+  title: CronAPI
+  description: |
+    HTTP-based cron job scheduling API. Register, get an API key, and start scheduling jobs in minutes.
+
+    ## Authentication
+
+    All job endpoints require a Bearer API key in the `Authorization` header:
+
+    ```
+    Authorization: Bearer ck_live_...
+    ```
+
+    Obtain an API key by calling `POST /api/v1/auth/register`.
+
+    ## Rate Limits
+
+    Rate limits vary by plan and are applied per API key per minute:
+
+    | Plan  | Requests/min |
+    |-------|-------------|
+    | free  | 10          |
+    | indie | 60          |
+    | pro   | 300         |
+
+    Rate-limited responses return `429 Too Many Requests` with a `Retry-After` header (seconds).
+  version: "1.0.0"
+  contact:
+    url: https://cronapi.up.railway.app
+
+servers:
+  - url: https://cronapi.up.railway.app
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: auth
+    description: Registration and API key management
+  - name: jobs
+    description: Job CRUD, executions, stats, and manual trigger
+  - name: system
+    description: Health, status, and pricing
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key (ck_live_...)
+
+  schemas:
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Ping health endpoint
+        endpointUrl:
+          type: string
+          format: uri
+          example: https://example.com/health
+        cronExpression:
+          type: string
+          example: "0 * * * *"
+        httpMethod:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE]
+          example: GET
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            X-Custom-Header: my-value
+        body:
+          type: string
+          nullable: true
+          example: '{"ping":true}'
+        enabled:
+          type: boolean
+          example: true
+        notifyUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Webhook URL to call on job failure
+          example: https://example.com/notify
+        maxRetries:
+          type: integer
+          minimum: 0
+          maximum: 5
+          example: 3
+        signingSecret:
+          type: string
+          description: HMAC secret used to sign requests to endpointUrl (X-Cron-Signature header)
+        timeoutMs:
+          type: integer
+          minimum: 1000
+          maximum: 120000
+          description: Request timeout in milliseconds
+          example: 30000
+        nextRunAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastRunAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    JobExecution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [success, failure, running]
+        status_code:
+          type: integer
+          nullable: true
+          example: 200
+        response_body:
+          type: string
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        attempt:
+          type: integer
+          example: 1
+        error_message:
+          type: string
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    JobStats:
+      type: object
+      properties:
+        last24h:
+          $ref: '#/components/schemas/StatsWindow'
+        last7d:
+          $ref: '#/components/schemas/StatsWindow'
+
+    StatsWindow:
+      type: object
+      properties:
+        totalRuns:
+          type: integer
+        successCount:
+          type: integer
+        failureCount:
+          type: integer
+        successRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          example: 0.97
+        avgResponseMs:
+          type: integer
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: Job not found
+
+paths:
+  # ── Auth ──────────────────────────────────────────────────────────────────────
+
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new account
+      description: Creates a user account and returns an API key. The key is shown only once — save it immediately.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: you@example.com
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  userId:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+                  plan:
+                    type: string
+                    example: free
+                  apiKey:
+                    type: string
+                    example: ck_live_...
+                  keyId:
+                    type: string
+                    format: uuid
+        "400":
+          description: Invalid or missing email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  email:
+                    type: string
+                    format: email
+                  plan:
+                    type: string
+                    enum: [free, indie, pro]
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/keys:
+    get:
+      tags: [auth]
+      summary: List API keys
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of API keys (secrets not returned)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [auth]
+      summary: Create a new API key
+      description: Creates an additional API key. The raw key is shown only once.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: CI key
+      responses:
+        "201":
+          description: Key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  apiKey:
+                    type: string
+                    example: ck_live_...
+                  keyId:
+                    type: string
+                    format: uuid
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/auth/keys/{keyId}:
+    delete:
+      tags: [auth]
+      summary: Revoke an API key
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Jobs ──────────────────────────────────────────────────────────────────────
+
+  /api/v1/jobs:
+    get:
+      tags: [jobs]
+      summary: List all jobs
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until rate limit resets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  retryAfterSeconds:
+                    type: integer
+
+    post:
+      tags: [jobs]
+      summary: Create a job
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, endpointUrl, cronExpression]
+              properties:
+                name:
+                  type: string
+                  example: Ping health endpoint
+                endpointUrl:
+                  type: string
+                  format: uri
+                  example: https://example.com/health
+                cronExpression:
+                  type: string
+                  example: "0 * * * *"
+                  description: Standard 5-field cron expression
+                httpMethod:
+                  type: string
+                  enum: [GET, POST, PUT, PATCH, DELETE]
+                  default: GET
+                headers:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  example:
+                    Authorization: Bearer token123
+                body:
+                  type: string
+                  nullable: true
+                  description: Request body (for POST/PUT/PATCH)
+                notifyUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                  description: Webhook URL to POST on failure
+                maxRetries:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  default: 3
+                timeoutMs:
+                  type: integer
+                  minimum: 1000
+                  maximum: 120000
+                  default: 30000
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    $ref: '#/components/schemas/Job'
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "402":
+          description: Plan limit reached (max jobs or minimum interval)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/jobs/{jobId}:
+    get:
+      tags: [jobs]
+      summary: Get a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Job details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    $ref: '#/components/schemas/Job'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags: [jobs]
+      summary: Update a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                endpointUrl:
+                  type: string
+                  format: uri
+                cronExpression:
+                  type: string
+                httpMethod:
+                  type: string
+                  enum: [GET, POST, PUT, PATCH, DELETE]
+                headers:
+                  type: object
+                  additionalProperties:
+                    type: string
+                body:
+                  type: string
+                  nullable: true
+                enabled:
+                  type: boolean
+                notifyUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                maxRetries:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                timeoutMs:
+                  type: integer
+                  minimum: 1000
+                  maximum: 120000
+      responses:
+        "200":
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    $ref: '#/components/schemas/Job'
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [jobs]
+      summary: Delete a job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Job deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/jobs/{jobId}/executions:
+    get:
+      tags: [jobs]
+      summary: List job executions
+      description: Returns paginated execution history for a job, newest first.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          description: Execution ID to paginate from (exclusive)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated execution list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JobExecution'
+                  nextCursor:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: Pass as `cursor` to fetch the next page; null when no more pages
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/jobs/{jobId}/stats:
+    get:
+      tags: [jobs]
+      summary: Get job stats
+      description: Returns success/failure counts and average response time for the last 24 h and 7 d.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Job statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    $ref: '#/components/schemas/JobStats'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/jobs/{jobId}/trigger:
+    post:
+      tags: [jobs]
+      summary: Manually trigger a job
+      description: Executes the job immediately, outside its cron schedule. Retries and notifications apply as configured.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  execution:
+                    $ref: '#/components/schemas/JobExecution'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── System ────────────────────────────────────────────────────────────────────
+
+  /api/v1/pricing:
+    get:
+      tags: [system]
+      summary: Get pricing plans
+      responses:
+        "200":
+          description: Available plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          enum: [free, indie, pro]
+                        price:
+                          type: integer
+                          description: USD/month
+                        maxJobs:
+                          type: integer
+                          nullable: true
+                          description: null means unlimited
+                        minIntervalMinutes:
+                          type: integer
+                        description:
+                          type: string
+
+  /health:
+    get:
+      tags: [system]
+      summary: Health check
+      responses:
+        "200":
+          description: Service status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, degraded]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    description: Seconds since process start
+                  database:
+                    type: string
+                    enum: [ok, error]
+                  scheduler:
+                    type: string
+
+  /status:
+    get:
+      tags: [system]
+      summary: Scheduler status
+      responses:
+        "200":
+          description: Scheduler status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uptime:
+                    type: number
+                  activeJobs:
+                    type: integer
+                  nextScheduledRun:
+                    type: string
+                    format: date-time
+                    nullable: true
