@@ -86,16 +86,26 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   app.get('/status', async () => {
-    const [activeJobsResult, nextRunResult] = await Promise.all([
+    const [activeJobsResult, nextRunResult, lastErrorResult] = await Promise.all([
       db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs WHERE enabled = true'),
       db.query<{ next_run_at: Date }>(
         'SELECT next_run_at FROM jobs WHERE enabled = true AND next_run_at IS NOT NULL ORDER BY next_run_at ASC LIMIT 1'
       ),
+      db.query<{ job_id: string; status: string; error_message: string | null; started_at: Date }>(
+        `SELECT job_id, status, error_message, started_at
+         FROM job_executions
+         WHERE status IN ('failed', 'timeout')
+         ORDER BY started_at DESC LIMIT 1`
+      ),
     ]);
+    const lastError = lastErrorResult.rows[0] ?? null;
     return {
       uptime: (Date.now() - appStartTime) / 1000,
       activeJobs: parseInt(activeJobsResult.rows[0]?.count ?? '0', 10),
       nextScheduledRun: nextRunResult.rows[0]?.next_run_at ?? null,
+      lastError: lastError
+        ? { jobId: lastError.job_id, status: lastError.status, message: lastError.error_message, at: lastError.started_at }
+        : null,
     };
   });
 

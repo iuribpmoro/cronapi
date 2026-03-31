@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { db } from './db/client';
 import { runJob } from './lib/executeJob';
+import { logger } from './lib/logger';
 
 export function startScheduler() {
   // Every minute: find enabled jobs due to run and execute them
@@ -27,6 +28,22 @@ export function startScheduler() {
       executeScheduledJob(job).catch(() => {});
     }
   });
+
+  // Every 5 minutes: self-health check (dogfooding our own /health endpoint)
+  cron.schedule('*/5 * * * *', async () => {
+    const port = process.env.PORT ?? '3000';
+    try {
+      const res = await fetch(`http://localhost:${port}/health`, { signal: AbortSignal.timeout(5_000) });
+      const body = await res.json() as Record<string, unknown>;
+      if (body.status === 'ok') {
+        logger.info('health_check_ok', { uptime: body.uptime, database: body.database });
+      } else {
+        logger.warn('health_check_degraded', { status: body.status, database: body.database });
+      }
+    } catch (err: any) {
+      logger.error('health_check_failed', { error: err.message });
+    }
+  });
 }
 
 async function executeScheduledJob(job: {
@@ -42,6 +59,17 @@ async function executeScheduledJob(job: {
   timeout_ms: number;
 }) {
   const result = await runJob(job);
+
+  if (result.status !== 'success') {
+    logger.error('job_execution_failed', {
+      jobId: job.id,
+      status: result.status,
+      retryCount: result.retryCount,
+      durationMs: result.durationMs,
+      responseStatus: result.responseStatus,
+      error: result.errorMessage,
+    });
+  }
 
   // Compute next run and update job
   let nextRun: Date | null = null;
