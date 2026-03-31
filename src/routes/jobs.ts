@@ -55,6 +55,42 @@ function validateCron(expr: string): boolean {
   }
 }
 
+// SSRF protection: block private/loopback/link-local hostnames
+const BLOCKED_HOSTNAME_PATTERNS = [
+  /^localhost$/i,
+  /^127\.\d+\.\d+\.\d+$/,
+  /^10\.\d+\.\d+\.\d+$/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/,
+  /^192\.168\.\d+\.\d+$/,
+  /^169\.254\.\d+\.\d+$/, // link-local / cloud metadata
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+  /^0\.0\.0\.0$/,
+];
+
+function validateEndpointUrl(raw: string): { ok: true } | { ok: false; reason: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return { ok: false, reason: 'Invalid URL' };
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { ok: false, reason: 'Only http and https URLs are allowed' };
+  }
+
+  const hostname = parsed.hostname;
+  for (const pattern of BLOCKED_HOSTNAME_PATTERNS) {
+    if (pattern.test(hostname)) {
+      return { ok: false, reason: 'Endpoint URL targets a private or reserved address' };
+    }
+  }
+
+  return { ok: true };
+}
+
 function nextRunAt(expr: string): Date {
   const interval = cronParser.parseExpression(expr);
   return interval.next().toDate();
@@ -94,8 +130,9 @@ export async function jobRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'Invalid httpMethod' });
     }
 
-    try { new URL(endpointUrl); } catch {
-      return reply.code(400).send({ error: 'Invalid endpointUrl' });
+    const urlCheck = validateEndpointUrl(endpointUrl);
+    if (!urlCheck.ok) {
+      return reply.code(400).send({ error: urlCheck.reason });
     }
 
     if (notifyUrl) {
@@ -172,8 +209,9 @@ export async function jobRoutes(app: FastifyInstance) {
     const updates = request.body ?? {};
 
     if (updates.endpointUrl !== undefined) {
-      try { new URL(updates.endpointUrl); } catch {
-        return reply.code(400).send({ error: 'Invalid endpointUrl' });
+      const urlCheck = validateEndpointUrl(updates.endpointUrl);
+      if (!urlCheck.ok) {
+        return reply.code(400).send({ error: urlCheck.reason });
       }
     }
     if (updates.notifyUrl) {

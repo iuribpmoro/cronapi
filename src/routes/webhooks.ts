@@ -16,12 +16,17 @@ export async function webhookRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: 'Missing webhook secret or signature' });
       }
 
+      const rawBody = (request as any).rawBody;
+      if (!rawBody) {
+        return reply.code(400).send({ error: 'Raw body not available for signature verification' });
+      }
+
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
 
       let event: Stripe.Event;
       try {
         event = stripe.webhooks.constructEvent(
-          (request as any).rawBody ?? Buffer.from(JSON.stringify(request.body)),
+          rawBody,
           sig,
           webhookSecret
         );
