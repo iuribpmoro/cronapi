@@ -132,6 +132,22 @@ async function migrate(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_request_logs_created_at ON request_logs(created_at DESC);
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS conversion_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        event TEXT NOT NULL,
+        metadata JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_conversion_events_user_id ON conversion_events(user_id);
+      CREATE INDEX IF NOT EXISTS idx_conversion_events_event ON conversion_events(event);
+      CREATE INDEX IF NOT EXISTS idx_conversion_events_created_at ON conversion_events(created_at DESC);
+    `);
+
     await client.query('COMMIT');
     console.log('Migration complete');
   } catch (err) {

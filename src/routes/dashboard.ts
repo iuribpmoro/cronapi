@@ -3,6 +3,7 @@ import { validateApiKey } from '../lib/apiKeys';
 import { db } from '../db/client';
 import { runJob } from '../lib/executeJob';
 import { getPlanLimits } from '../lib/limits';
+import { logConversionEvent } from '../lib/usageTracking';
 import Stripe from 'stripe';
 import cronParser from 'cron-parser';
 
@@ -938,6 +939,8 @@ export async function dashboardRoutes(app: FastifyInstance) {
       success_url: `${baseUrl}/dashboard/jobs?flash=Plan+upgraded+successfully`,
       cancel_url: `${baseUrl}/dashboard/billing`,
     });
+
+    logConversionEvent(user.userId, 'checkout_initiated', { plan, sessionId: session.id });
 
     reply.redirect(session.url!);
   }));

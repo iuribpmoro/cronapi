@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { db } from '../db/client';
 import { generateApiKey, listApiKeys, revokeApiKey } from '../lib/apiKeys';
 import { authenticate } from '../middleware/auth';
+import { logConversionEvent } from '../lib/usageTracking';
 
 export async function authRoutes(app: FastifyInstance) {
   // POST /api/v1/auth/register
@@ -22,6 +23,8 @@ export async function authRoutes(app: FastifyInstance) {
     );
     const userId = userResult.rows[0].id;
     const { raw, record } = await generateApiKey(userId, 'Default');
+
+    logConversionEvent(userId, 'registration', { email: email.toLowerCase() });
 
     return reply.code(201).send({
       message: 'Registration successful. Save your API key — it will not be shown again.',
@@ -85,14 +88,85 @@ export async function waitlistRoutes(app: FastifyInstance) {
 
 // Admin routes — protected by ADMIN_SECRET header
 export async function adminRoutes(app: FastifyInstance) {
-  app.get('/waitlist', async (request, reply) => {
+  function requireAdminSecret(request: any, reply: any) {
     const secret = process.env.ADMIN_SECRET;
     if (!secret || request.headers['x-admin-secret'] !== secret) {
-      return reply.code(401).send({ error: 'Unauthorized' });
+      reply.code(401).send({ error: 'Unauthorized' });
+      return false;
     }
+    return true;
+  }
+
+  app.get('/waitlist', async (request, reply) => {
+    if (!requireAdminSecret(request, reply)) return;
     const result = await db.query<{ email: string; created_at: Date }>(
       'SELECT email, created_at FROM waitlist ORDER BY created_at ASC'
     );
     return reply.send({ count: result.rows.length, emails: result.rows });
+  });
+
+  app.get('/metrics', async (request, reply) => {
+    if (!requireAdminSecret(request, reply)) return;
+
+    const [
+      totalUsersResult,
+      activeUsersResult,
+      totalJobsResult,
+      jobsByPlanResult,
+      executionsResult,
+      conversionEventsResult,
+    ] = await Promise.all([
+      db.query<{ count: string }>('SELECT COUNT(*) as count FROM users'),
+      db.query<{ count: string }>(
+        `SELECT COUNT(DISTINCT u.id) as count FROM users u
+         JOIN api_keys ak ON ak.user_id = u.id
+         JOIN api_usage au ON au.key_id = ak.id
+         WHERE au.date >= CURRENT_DATE - INTERVAL '7 days'`
+      ),
+      db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs'),
+      db.query<{ plan: string; count: string }>(
+        `SELECT u.plan, COUNT(j.id) as count FROM users u
+         LEFT JOIN jobs j ON j.user_id = u.id
+         GROUP BY u.plan`
+      ),
+      db.query<{ status: string; count: string }>(
+        `SELECT status, COUNT(*) as count FROM job_executions
+         WHERE started_at >= NOW() - INTERVAL '24 hours'
+         GROUP BY status`
+      ),
+      db.query<{ event: string; count: string }>(
+        `SELECT event, COUNT(*) as count FROM conversion_events GROUP BY event ORDER BY count DESC`
+      ),
+    ]);
+
+    const executionsByStatus: Record<string, number> = {};
+    for (const row of executionsResult.rows) {
+      executionsByStatus[row.status] = parseInt(row.count, 10);
+    }
+
+    const jobsByPlan: Record<string, number> = {};
+    for (const row of jobsByPlanResult.rows) {
+      jobsByPlan[row.plan] = parseInt(row.count, 10);
+    }
+
+    const conversionCounts: Record<string, number> = {};
+    for (const row of conversionEventsResult.rows) {
+      conversionCounts[row.event] = parseInt(row.count, 10);
+    }
+
+    return reply.send({
+      users: {
+        total: parseInt(totalUsersResult.rows[0].count, 10),
+        activeLast7d: parseInt(activeUsersResult.rows[0].count, 10),
+      },
+      jobs: {
+        total: parseInt(totalJobsResult.rows[0].count, 10),
+        byPlan: jobsByPlan,
+      },
+      executions: {
+        last24h: executionsByStatus,
+      },
+      conversions: conversionCounts,
+    });
   });
 }

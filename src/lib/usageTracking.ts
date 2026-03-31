@@ -29,6 +29,16 @@ export function logRequest(
   ).catch(() => {});
 }
 
+/**
+ * Log a conversion event. Fire-and-forget.
+ */
+export function logConversionEvent(userId: string, event: string, metadata: Record<string, unknown> = {}): void {
+  db.query(
+    `INSERT INTO conversion_events (user_id, event, metadata) VALUES ($1, $2, $3)`,
+    [userId, event, JSON.stringify(metadata)]
+  ).catch(() => {});
+}
+
 export async function getUsageToday(keyId: string): Promise<number> {
   const result = await db.query<{ request_count: string }>(
     `SELECT request_count FROM api_usage WHERE key_id = $1 AND date = CURRENT_DATE`,

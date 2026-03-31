@@ -4,6 +4,7 @@ import { db } from '../db/client';
 import { authenticate } from '../middleware/auth';
 import { getPlanLimits } from '../lib/limits';
 import { runJob } from '../lib/executeJob';
+import { logConversionEvent } from '../lib/usageTracking';
 
 interface Job {
   id: string;
@@ -180,6 +181,11 @@ export async function jobRoutes(app: FastifyInstance) {
        RETURNING *`,
       [userId, name, endpointUrl, cronExpression, httpMethod.toUpperCase(), JSON.stringify(headers), body ?? null, notifyUrl ?? null, maxRetries, timeoutMs, nextRunAt(cronExpression)]
     );
+
+    // Log first_job_created event when this is the user's first job
+    if (parseInt(countResult.rows[0].count) === 0) {
+      logConversionEvent(userId, 'first_job_created', { plan });
+    }
 
     return reply.code(201).send({ job: toJobResponse(result.rows[0]) });
   });
