@@ -67,6 +67,7 @@ async function migrate(): Promise<void> {
         response_body TEXT,
         duration_ms INT,
         error_message TEXT,
+        retry_count INT NOT NULL DEFAULT 0,
         started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         finished_at TIMESTAMPTZ
       )
@@ -76,6 +77,11 @@ async function migrate(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_job_executions_job_id ON job_executions(job_id);
       CREATE INDEX IF NOT EXISTS idx_job_executions_started_at ON job_executions(started_at DESC);
     `);
+
+    // Idempotent additions for post-MVP features
+    await client.query(`ALTER TABLE job_executions ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS notify_url TEXT`);
+    await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS max_retries INT NOT NULL DEFAULT 3`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS waitlist (
