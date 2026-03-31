@@ -2,6 +2,9 @@ import { db } from './client';
 
 async function migrate(): Promise<void> {
   const client = await db.connect();
+  // Enable pgcrypto outside of transaction (CREATE EXTENSION cannot run inside one)
+  await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
+
   try {
     await client.query('BEGIN');
 
