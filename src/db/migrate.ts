@@ -85,6 +85,36 @@ async function migrate(): Promise<void> {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS api_usage (
+        key_id UUID NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+        date DATE NOT NULL DEFAULT CURRENT_DATE,
+        request_count INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (key_id, date)
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_api_usage_date ON api_usage(date DESC);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS request_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        key_id UUID NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
+        method TEXT NOT NULL,
+        endpoint TEXT NOT NULL,
+        status_code INT NOT NULL,
+        duration_ms INT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_request_logs_key_id ON request_logs(key_id);
+      CREATE INDEX IF NOT EXISTS idx_request_logs_created_at ON request_logs(created_at DESC);
+    `);
+
     await client.query('COMMIT');
     console.log('Migration complete');
   } catch (err) {

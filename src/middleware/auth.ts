@@ -1,6 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { validateApiKey } from '../lib/apiKeys';
 import { db } from '../db/client';
+import { checkRateLimit } from '../lib/rateLimiter';
+import { trackUsage } from '../lib/usageTracking';
+import { getPlanLimits } from '../lib/limits';
 
 export interface AuthUser {
   userId: string;
@@ -39,10 +42,29 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     return;
   }
 
+  const plan = userResult.rows[0].plan as AuthUser['plan'];
+  const limits = getPlanLimits(plan);
+  const rateCheck = checkRateLimit(validated.keyId, limits.rateLimit);
+
+  if (!rateCheck.allowed) {
+    const retryAfter = Math.ceil((rateCheck.retryAfterMs ?? 60000) / 1000);
+    reply
+      .code(429)
+      .header('Retry-After', String(retryAfter))
+      .send({
+        error: `Rate limit exceeded. ${plan} plan allows ${limits.rateLimit} requests/minute.`,
+        retryAfterSeconds: retryAfter,
+      });
+    return;
+  }
+
   request.user = {
     userId: validated.userId,
     keyId: validated.keyId,
     email: userResult.rows[0].email,
-    plan: userResult.rows[0].plan as AuthUser['plan'],
+    plan,
   };
+
+  // Track usage asynchronously — do not block the request
+  trackUsage(validated.keyId);
 }

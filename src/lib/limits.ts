@@ -2,14 +2,17 @@ export const PLAN_LIMITS = {
   free: {
     maxJobs: 10,
     minIntervalMinutes: 60,
+    rateLimit: 10, // requests per minute
   },
   indie: {
     maxJobs: 100,
     minIntervalMinutes: 1,
+    rateLimit: 60,
   },
   pro: {
     maxJobs: Infinity,
     minIntervalMinutes: 1,
+    rateLimit: 300,
   },
 } as const;
 

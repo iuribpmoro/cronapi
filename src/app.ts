@@ -7,8 +7,10 @@ import { authRoutes, waitlistRoutes } from './routes/auth';
 import { jobRoutes } from './routes/jobs';
 import { webhookRoutes } from './routes/webhooks';
 import { db } from './db/client';
+import { logRequest } from './lib/usageTracking';
 
 export const appStartTime = Date.now();
+const kStartTime = Symbol('startTime');
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -36,6 +38,22 @@ export async function buildApp(): Promise<FastifyInstance> {
       prefix: '/',
     });
   }
+
+  // Request logging hook — only logs authenticated requests
+  app.addHook('onResponse', (request, reply, done) => {
+    const startTime = (request as any)[kStartTime];
+    if (request.user?.keyId && startTime !== undefined) {
+      const durationMs = Date.now() - startTime;
+      const endpoint = request.routerPath ?? request.url;
+      logRequest(request.user.keyId, request.method, endpoint, reply.statusCode, durationMs);
+    }
+    done();
+  });
+
+  app.addHook('onRequest', (request, reply, done) => {
+    (request as any)[kStartTime] = Date.now();
+    done();
+  });
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(jobRoutes, { prefix: '/api/v1/jobs' });
