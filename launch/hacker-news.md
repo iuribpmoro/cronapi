@@ -1,53 +1,37 @@
-# CronAPI — Hacker News Launch Post
+# CronAPI — Hacker News Show HN
 
-## Show HN Post
+---
 
-**Title:** Show HN: CronAPI – schedule HTTP endpoints via a REST API, no servers required
+**Title:** Show HN: CronAPI – schedule HTTP webhooks via a REST API (no servers, no crontabs)
 
 **Body:**
 
-Hey HN,
+I built CronAPI because I kept solving the same small problem across different projects: I need to call an HTTP endpoint on a schedule.
 
-I built CronAPI because I kept reaching for crontab or cloud schedulers to do one simple thing: call a URL on a schedule.
+The obvious tools are either too heavy (EventBridge, GCP Cloud Scheduler), too tied to your platform (Vercel Cron, Railway cron), or brittle (setInterval inside a long-running process). I wanted something that treated scheduled HTTP calls as a first-class API resource.
 
-The frustration: every "proper" solution (AWS EventBridge, GCP Cloud Scheduler, Lambda cron) involves setting up IAM roles, deployment configs, and cloud-specific tooling — all to fire an HTTP request on a schedule.
+**How it works:**
 
-CronAPI is a simple HTTP API that does exactly that. You register, get an API key, and POST a job:
+1. POST to `/api/v1/auth/register` with your email → get an API key
+2. POST to `/api/v1/jobs` with a cron expression and target URL
+3. CronAPI calls your endpoint on schedule
 
-```bash
-# Register
-curl -X POST [URL]/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email": "you@example.com"}'
-# → returns an API key (save it, shown once)
+That's the entire user-facing surface. No SDK, no dashboard required (though Swagger UI is available).
 
-# Create a job
-curl -X POST [URL]/api/v1/jobs \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Daily report",
-    "endpointUrl": "https://yourapp.com/hooks/report",
-    "cronExpression": "0 8 * * 1-5",
-    "httpMethod": "POST",
-    "headers": {"x-secret": "abc123"}
-  }'
-```
+**Under the hood:**
 
-Your endpoint is called Monday–Friday at 8am. No server. No infrastructure.
+- Node.js + TypeScript + PostgreSQL
+- Scheduler polls jobs every minute: `WHERE nextRunAt <= now() AND status = 'active'`
+- HTTP calls are made with a configurable timeout; status code + latency + response body stored per execution (30-day retention)
+- Rate limiting on the API (sliding window)
+- Per-request logging for audit trail
 
-**Architecture decisions worth mentioning:**
+**The limitation I'd call out honestly:** the scheduler is single-instance DB polling. It works fine at current scale but won't distribute horizontally. A BullMQ or pg-boss queue would be the right next step for HA.
 
-- **Scheduler loop:** Runs every minute, queries PostgreSQL for jobs due for execution (`nextRunAt <= now`), fires them, and writes back the next scheduled time using the cron expression. Simple and auditable.
-- **No in-memory state:** All job state lives in PostgreSQL. The scheduler is stateless — restarts don't lose queued work.
-- **API key model:** Keys are hashed before storage (bcrypt). The plain-text key is returned once at creation. This matches the model most developers expect from service APIs.
-- **Execution history:** Every run is logged with the HTTP status, response body (truncated), and runtime. Retained for 30 days.
-- **Rate limiting:** Sliding window per API key to prevent abuse on the free tier.
+**Pricing:** Free (10 jobs, ≥1h interval) / Indie $9/mo (100 jobs, per-minute) / Pro $29/mo (unlimited)
 
-**Tech stack:** TypeScript, Fastify, PostgreSQL, node-cron. Deployable on Railway or Docker.
+MIT licensed and self-hostable via Docker. Deploy to Railway with one click.
 
-**Pricing:** Free tier: 10 jobs, hourly minimum. Indie ($9/mo): 100 jobs, per-minute. Pro ($29/mo): unlimited.
-
-Happy to answer questions about the architecture, tradeoffs, or why I made certain decisions.
-
-→ [URL]
+GitHub: https://github.com/iuribpmoro/cronapi
+Live API: [URL]
+Docs: [URL]/docs
