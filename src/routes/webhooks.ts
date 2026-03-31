@@ -3,11 +3,21 @@ import Stripe from 'stripe';
 import { db } from '../db/client';
 
 export async function webhookRoutes(app: FastifyInstance) {
+  // Capture raw body buffer for Stripe signature verification.
+  // Fastify's built-in JSON parser discards the original bytes; we need them
+  // to call stripe.webhooks.constructEvent(). Scoped to this plugin only.
+  app.addContentTypeParser('application/json', { parseAs: 'buffer' }, function (req, body, done) {
+    (req as any).rawBody = body;
+    try {
+      done(null, JSON.parse(body.toString()));
+    } catch (err: any) {
+      done(err as Error, undefined);
+    }
+  });
+
   app.post(
     '/stripe',
-    {
-      config: { rawBody: true },
-    },
+    {},
     async (request, reply) => {
       const sig = request.headers['stripe-signature'];
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
