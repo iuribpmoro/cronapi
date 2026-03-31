@@ -4,6 +4,7 @@ import { db } from '../db/client';
 import { runJob } from '../lib/executeJob';
 import { getPlanLimits } from '../lib/limits';
 import { logConversionEvent } from '../lib/usageTracking';
+import { checkUsageAndAlert } from '../lib/usageAlerts';
 import Stripe from 'stripe';
 import cronParser from 'cron-parser';
 
@@ -131,6 +132,7 @@ function layout(title: string, body: string, user?: { email: string; plan: strin
       <a href="/api/docs" target="_blank" rel="noopener">API Docs</a>
       ${user ? `<span>${user.email}</span>
       <span class="badge badge-active" style="text-transform:capitalize;">${user.plan}</span>
+      <a href="/dashboard/usage">Usage</a>
       <a href="/dashboard/billing">Billing</a>
       <a href="/dashboard/logout">Logout</a>` : ''}
     </div>
@@ -558,6 +560,111 @@ function billingPage(user: { email: string; plan: string }, usage: { jobCount: n
   `, user);
 }
 
+function usageDashboardPage(
+  user: { email: string; plan: string },
+  data: {
+    jobCount: number;
+    jobLimit: number | null;
+    enabledJobs: number;
+    execThisMonth: number;
+    successThisMonth: number;
+    failThisMonth: number;
+    nextRunAt: Date | null;
+    dailyExecs: { day: string; count: number }[];
+  }
+) {
+  const jobPct = data.jobLimit ? Math.min(100, Math.round((data.jobCount / data.jobLimit) * 100)) : 0;
+  const successRate = (data.successThisMonth + data.failThisMonth) > 0
+    ? Math.round((data.successThisMonth / (data.successThisMonth + data.failThisMonth)) * 100)
+    : null;
+
+  const barColor = jobPct >= 100 ? '#ef4444' : jobPct >= 80 ? '#f59e0b' : '#4f6ef7';
+
+  const jobBar = data.jobLimit
+    ? `<div style="background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;margin-top:8px;">
+         <div style="background:${barColor};width:${jobPct}%;height:100%;border-radius:4px;transition:width 0.3s;"></div>
+       </div>
+       <div style="font-size:11px;color:${jobPct >= 80 ? '#d97706' : '#6b7280'};margin-top:4px;">
+         ${jobPct}% of limit used
+       </div>`
+    : '<div style="font-size:12px;color:#16a34a;margin-top:4px;">Unlimited</div>';
+
+  const upgradePrompt = data.jobLimit && jobPct >= 80
+    ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <strong style="color:#92400e;">${jobPct >= 100 ? '🚫 Job limit reached' : '⚠ Approaching job limit'}</strong>
+          <span style="color:#78350f;font-size:13px;margin-left:8px;">
+            ${jobPct >= 100
+              ? `You cannot create new jobs on the <strong>${user.plan}</strong> plan.`
+              : `${data.jobCount} / ${data.jobLimit} jobs used on the <strong>${user.plan}</strong> plan.`}
+          </span>
+        </div>
+        <a href="/dashboard/billing" class="btn btn-primary btn-sm">Upgrade plan →</a>
+      </div>`
+    : '';
+
+  // Render a simple bar chart of daily executions (last 30 days)
+  const maxExecs = Math.max(...data.dailyExecs.map(d => d.count), 1);
+  const chartBars = data.dailyExecs.map(d => {
+    const h = Math.round((d.count / maxExecs) * 60);
+    return `<div title="${d.day}: ${d.count} executions" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;">
+      <div style="background:#4f6ef7;width:100%;height:${h}px;border-radius:2px 2px 0 0;min-height:2px;"></div>
+    </div>`;
+  }).join('');
+
+  return layout('Usage', `
+    ${upgradePrompt}
+    <div class="page-actions">
+      <h1>Usage Overview</h1>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Jobs Created</div>
+        <div class="stat-value">${data.jobCount}${data.jobLimit ? ` / ${data.jobLimit}` : ''}</div>
+        ${jobBar}
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Jobs</div>
+        <div class="stat-value">${data.enabledJobs}</div>
+        <div class="stat-sub">${data.jobCount - data.enabledJobs} paused</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Executions This Month</div>
+        <div class="stat-value">${data.execThisMonth.toLocaleString()}</div>
+        <div class="stat-sub">${data.successThisMonth} ok / ${data.failThisMonth} failed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Success Rate (Month)</div>
+        <div class="stat-value">${successRate !== null ? successRate + '%' : '—'}</div>
+        <div class="stat-sub">${data.execThisMonth} total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Next Scheduled Run</div>
+        <div class="stat-value" style="font-size:13px;">${data.nextRunAt ? fmt(data.nextRunAt) : '—'}</div>
+        <div class="stat-sub">${data.enabledJobs} enabled job${data.enabledJobs !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Plan</div>
+        <div class="stat-value" style="font-size:18px;text-transform:capitalize;">${user.plan}</div>
+        <div class="stat-sub"><a href="/dashboard/billing">View / upgrade →</a></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Daily Executions (last 30 days)</h2>
+      ${data.dailyExecs.length === 0
+        ? '<div class="empty-state" style="padding:24px;">No executions yet.</div>'
+        : `<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding-top:8px;">${chartBars}</div>
+           <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:4px;">
+             <span>${data.dailyExecs[0]?.day ?? ''}</span>
+             <span>${data.dailyExecs[data.dailyExecs.length - 1]?.day ?? ''}</span>
+           </div>`
+      }
+    </div>
+  `, user);
+}
+
 function escapeHtml(str: string) {
   return str
     .replace(/&/g, '&amp;')
@@ -643,6 +750,18 @@ export async function dashboardRoutes(app: FastifyInstance) {
       return reply.type('text/html').send(jobFormPage(user, null, 'Name, Endpoint URL, and Cron Expression are required.'));
     }
 
+    // Enforce plan job limit with upgrade prompt
+    const limits = getPlanLimits(user.plan as any);
+    if (limits.maxJobs !== Infinity) {
+      const countResult = await db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs WHERE user_id=$1', [user.userId]);
+      const jobCount = parseInt(countResult.rows[0]?.count ?? '0');
+      if (jobCount >= limits.maxJobs) {
+        return reply.type('text/html').send(jobFormPage(user, null,
+          `🚫 You've reached the ${limits.maxJobs}-job limit on the ${user.plan} plan. <a href="/dashboard/billing" style="color:#4f6ef7;font-weight:600;">Upgrade your plan →</a>`
+        ));
+      }
+    }
+
     let parsedHeaders: Record<string, string> = {};
     if (headers && headers.trim()) {
       try { parsedHeaders = JSON.parse(headers); } catch {
@@ -669,6 +788,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
       return reply.type('text/html').send(jobFormPage(user, null, `Error: ${err.message}`));
     }
 
+    checkUsageAndAlert(user.userId, user.email, user.plan);
     reply.redirect('/dashboard/jobs?flash=Job+created+successfully');
   }));
 
@@ -834,6 +954,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
       [user.userId, name, endpointUrl, cronExpression, httpMethod.toUpperCase(), nextRunAt(cronExpression)]
     );
     const jobId = insertResult.rows[0].id;
+    checkUsageAndAlert(user.userId, user.email, user.plan);
     reply.redirect(`/dashboard/onboarding/step2/${jobId}`);
   }));
 
@@ -877,6 +998,69 @@ export async function dashboardRoutes(app: FastifyInstance) {
     }
     await db.query('UPDATE users SET onboarding_completed=true, updated_at=NOW() WHERE id=$1', [user.userId]);
     reply.redirect('/dashboard/jobs?flash=Welcome+to+CronAPI!+Your+first+job+is+ready.');
+  }));
+
+  // ── usage ────────────────────────────────────────────────────────────────────
+
+  // GET /dashboard/usage
+  app.get('/usage', requireAuth(async (_req, reply, user) => {
+    const limits = getPlanLimits(user.plan as any);
+
+    const [jobsResult, execResult, nextRunResult, dailyResult] = await Promise.all([
+      db.query<{ count: string; enabled_count: string }>(
+        `SELECT COUNT(*) as count, COUNT(*) FILTER (WHERE enabled = true) as enabled_count FROM jobs WHERE user_id = $1`,
+        [user.userId]
+      ),
+      db.query<{ total: string; success: string; fail: string }>(
+        `SELECT
+           COUNT(*) as total,
+           COUNT(*) FILTER (WHERE je.status = 'success') as success,
+           COUNT(*) FILTER (WHERE je.status != 'success') as fail
+         FROM job_executions je
+         JOIN jobs j ON j.id = je.job_id
+         WHERE j.user_id = $1 AND DATE_TRUNC('month', je.started_at) = DATE_TRUNC('month', NOW())`,
+        [user.userId]
+      ),
+      db.query<{ next_run_at: Date }>(
+        `SELECT MIN(next_run_at) as next_run_at FROM jobs WHERE user_id = $1 AND enabled = true`,
+        [user.userId]
+      ),
+      db.query<{ day: string; count: string }>(
+        `SELECT DATE(je.started_at) as day, COUNT(*) as count
+         FROM job_executions je
+         JOIN jobs j ON j.id = je.job_id
+         WHERE j.user_id = $1 AND je.started_at >= NOW() - INTERVAL '30 days'
+         GROUP BY DATE(je.started_at)
+         ORDER BY day ASC`,
+        [user.userId]
+      ),
+    ]);
+
+    // Build a 30-day array with zeros for missing days
+    const dailyMap = new Map<string, number>();
+    for (const row of dailyResult.rows) {
+      dailyMap.set(row.day, parseInt(row.count));
+    }
+    const dailyExecs: { day: string; count: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      dailyExecs.push({ day: key, count: dailyMap.get(key) ?? 0 });
+    }
+
+    const data = {
+      jobCount: parseInt(jobsResult.rows[0]?.count ?? '0'),
+      jobLimit: limits.maxJobs === Infinity ? null : limits.maxJobs,
+      enabledJobs: parseInt(jobsResult.rows[0]?.enabled_count ?? '0'),
+      execThisMonth: parseInt(execResult.rows[0]?.total ?? '0'),
+      successThisMonth: parseInt(execResult.rows[0]?.success ?? '0'),
+      failThisMonth: parseInt(execResult.rows[0]?.fail ?? '0'),
+      nextRunAt: nextRunResult.rows[0]?.next_run_at ?? null,
+      dailyExecs,
+    };
+
+    reply.type('text/html').send(usageDashboardPage(user, data));
   }));
 
   // ── billing ─────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import cronParser from 'cron-parser';
 import { db } from '../db/client';
 import { authenticate } from '../middleware/auth';
 import { getPlanLimits } from '../lib/limits';
+import { checkUsageAndAlert } from '../lib/usageAlerts';
 import { runJob } from '../lib/executeJob';
 import { logConversionEvent } from '../lib/usageTracking';
 
@@ -186,6 +187,7 @@ export async function jobRoutes(app: FastifyInstance) {
     if (parseInt(countResult.rows[0].count) === 0) {
       logConversionEvent(userId, 'first_job_created', { plan });
     }
+    checkUsageAndAlert(userId, request.user!.email, request.user!.plan);
 
     return reply.code(201).send({ job: toJobResponse(result.rows[0]) });
   });
@@ -380,4 +382,65 @@ export async function jobRoutes(app: FastifyInstance) {
       return reply.code(200).send({ execution });
     }
   );
+
+  // GET /api/v1/admin/metrics — aggregate metrics for internal use
+  // Protected by ADMIN_SECRET env var (checked as Bearer token or ?secret= query param)
+  app.get('/admin/metrics', async (request, reply) => {
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret) return reply.code(503).send({ error: 'Admin metrics not enabled' });
+
+    const provided =
+      (request.headers.authorization?.startsWith('Bearer ') ? request.headers.authorization.slice(7) : null) ??
+      (request.query as any).secret;
+
+    if (provided !== adminSecret) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    const [usersResult, jobsResult, execResult] = await Promise.all([
+      db.query<{ total: string; free: string; indie: string; pro: string }>(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE plan = 'free') as free,
+          COUNT(*) FILTER (WHERE plan = 'indie') as indie,
+          COUNT(*) FILTER (WHERE plan = 'pro') as pro
+        FROM users
+      `),
+      db.query<{ total: string; active: string }>(`
+        SELECT COUNT(*) as total, COUNT(*) FILTER (WHERE enabled = true) as active FROM jobs
+      `),
+      db.query<{ total_this_month: string; success_this_month: string; total_today: string }>(`
+        SELECT
+          COUNT(*) FILTER (WHERE DATE_TRUNC('month', started_at) = DATE_TRUNC('month', NOW())) as total_this_month,
+          COUNT(*) FILTER (WHERE status = 'success' AND DATE_TRUNC('month', started_at) = DATE_TRUNC('month', NOW())) as success_this_month,
+          COUNT(*) FILTER (WHERE started_at >= CURRENT_DATE) as total_today
+        FROM job_executions
+      `),
+    ]);
+
+    const u = usersResult.rows[0];
+    const j = jobsResult.rows[0];
+    const e = execResult.rows[0];
+
+    return reply.send({
+      users: {
+        total: parseInt(u.total),
+        free: parseInt(u.free),
+        indie: parseInt(u.indie),
+        pro: parseInt(u.pro),
+        paid: parseInt(u.indie) + parseInt(u.pro),
+      },
+      jobs: {
+        total: parseInt(j.total),
+        active: parseInt(j.active),
+        paused: parseInt(j.total) - parseInt(j.active),
+      },
+      executions: {
+        thisMonth: parseInt(e.total_this_month),
+        successThisMonth: parseInt(e.success_this_month),
+        today: parseInt(e.total_today),
+      },
+      generatedAt: new Date().toISOString(),
+    });
+  });
 }
