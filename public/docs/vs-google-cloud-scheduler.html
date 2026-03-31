@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI vs Google Cloud Scheduler: Developer Comparison 2026</title>
+  <meta name="description" content="CronAPI vs Google Cloud Scheduler: setup complexity, pricing, HMAC vs OIDC auth, and when each service fits your architecture." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/docs/vs-google-cloud-scheduler.html" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 860px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.75rem; }
+    h3 { font-size: 1.1rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: #c9d1d9; }
+    p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    ul { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    li { margin-bottom: 0.5rem; }
+    strong { color: #e6edf3; }
+    code { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.85em; font-family: 'Courier New', monospace; color: #79c0ff; }
+    .comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; background: #161b22; }
+    td { color: #c9d1d9; }
+    th:not(:first-child), td:not(:first-child) { text-align: center; }
+    tr:hover td { background: #161b22; }
+    .yes { color: #3fb950; font-weight: 600; }
+    .no { color: #6e7681; }
+    .partial { color: #e3b341; }
+    td:nth-child(2) { color: #58a6ff; font-weight: 600; }
+    .callout { background: #161b22; border-left: 3px solid #58a6ff; border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+    .callout p { margin: 0; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / <a href="/docs/comparison.html">Compare</a> / CronAPI vs Google Cloud Scheduler</div>
+
+  <h1>CronAPI vs Google Cloud Scheduler</h1>
+  <p>Google Cloud Scheduler is a managed cron service within GCP. It's powerful and deeply integrated with Google Cloud infrastructure. CronAPI is cloud-agnostic, designed for developers who want simple HTTP scheduling without GCP account requirements. This comparison helps you decide which fits your architecture.</p>
+
+  <h2>Setup Complexity</h2>
+
+  <p>This is the biggest practical difference between the two services.</p>
+
+  <h3>CronAPI setup</h3>
+  <p>One curl command to register, one curl command to create a job:</p>
+  <ul>
+    <li>Register with email/password → get API key</li>
+    <li>POST job with URL, cron expression, HTTP method</li>
+    <li>Total time: ~60 seconds</li>
+  </ul>
+
+  <h3>Google Cloud Scheduler setup</h3>
+  <ul>
+    <li>Create or select a GCP project</li>
+    <li>Enable Cloud Scheduler API</li>
+    <li>Enable Cloud Resource Manager API (for some configurations)</li>
+    <li>Configure service account with appropriate IAM roles</li>
+    <li>Choose target type: HTTP, Pub/Sub, or App Engine</li>
+    <li>For HTTP targets with authentication: configure OIDC token or OAuth header</li>
+    <li>Create job via Console, gcloud CLI, or Cloud Scheduler API</li>
+    <li>Total time: 15–30 minutes minimum; longer if new to GCP</li>
+  </ul>
+
+  <div class="callout">
+    <p><strong>Note:</strong> If you're already running on GCP and have existing service accounts and IAM configured, Cloud Scheduler setup is significantly faster. The overhead matters most for teams new to GCP or running infrastructure outside Google Cloud.</p>
+  </div>
+
+  <h2>Pricing</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr><th>Scenario</th><th>CronAPI</th><th>Google Cloud Scheduler</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>3 jobs / month</td><td>Free</td><td>Free (3-job free tier)</td></tr>
+        <tr><td>10 jobs / month</td><td>Free</td><td>~$0.10 (estimated)</td></tr>
+        <tr><td>100 jobs / month</td><td>$9/mo (flat)</td><td>~$1.00 + invocation costs</td></tr>
+        <tr><td>Unlimited jobs</td><td>$29/mo (flat)</td><td>Usage-based — scales with invocations</td></tr>
+        <tr><td>Predictable billing</td><td class="yes">Yes (flat tiers)</td><td class="partial">No (usage-based)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Cloud Scheduler itself is cheap — about $0.10 per job per month after the first 3. But "cheap scheduler" often means paying for compute separately. If your jobs trigger Cloud Run, Cloud Functions, or other GCP services, those invocations have their own costs. For teams already in GCP, this may still be cost-effective. For teams outside GCP, it adds billing complexity.</p>
+
+  <h2>Feature Comparison</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>CronAPI</th><th>Google Cloud Scheduler</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>HTTP targets</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Pub/Sub targets</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>App Engine targets</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>HMAC signing</td><td class="yes">Yes (automatic)</td><td class="no">No (OIDC/OAuth instead)</td></tr>
+        <tr><td>OIDC authentication</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Automatic retries</td><td class="yes">Yes (3 attempts)</td><td class="yes">Yes (configurable)</td></tr>
+        <tr><td>Execution history</td><td class="yes">Yes (via API + dashboard)</td><td class="yes">Cloud Logging</td></tr>
+        <tr><td>GCP account required</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom HTTP headers</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom request body</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Web dashboard</td><td class="yes">Yes (standalone)</td><td class="yes">GCP Console</td></tr>
+        <tr><td>Per-minute scheduling (free)</td><td class="no">No (paid)</td><td class="yes">Yes (metered)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Authentication Differences</h2>
+
+  <p>Both services provide a way to authenticate scheduled requests to your endpoint — but they use different mechanisms.</p>
+
+  <p><strong>CronAPI:</strong> HMAC-SHA256 signatures. A shared secret is used to compute a cryptographic hash of the request body. Your endpoint verifies the hash using the same secret. Simple to implement in any language without Google dependencies.</p>
+
+  <p><strong>Google Cloud Scheduler:</strong> OIDC tokens or OAuth2 bearer tokens. Your endpoint must validate a JWT from Google's identity infrastructure. Powerful and well-integrated with GCP, but requires knowledge of OIDC validation and a dependency on Google's public key endpoint (<code>https://www.googleapis.com/oauth2/v3/certs</code>).</p>
+
+  <p>If you're already using Google identity for auth (Firebase, Cloud IAP, etc.), Cloud Scheduler's OIDC approach slots in naturally. If you're on a non-GCP stack, HMAC is simpler.</p>
+
+  <h2>When to Choose Each</h2>
+
+  <p><strong>Choose Google Cloud Scheduler if:</strong></p>
+  <ul>
+    <li>You're already running on GCP and use Cloud Run, Cloud Functions, or App Engine</li>
+    <li>You need Pub/Sub or App Engine targets (not just HTTP)</li>
+    <li>You use Google identity for authentication and want OIDC token validation</li>
+    <li>You need fine-grained retry configuration beyond 3 attempts</li>
+  </ul>
+
+  <p><strong>Choose CronAPI if:</strong></p>
+  <ul>
+    <li>Your infrastructure is cloud-agnostic, on Railway, Render, Vercel, Heroku, or a VPS</li>
+    <li>You want to be operational in under 60 seconds without GCP setup</li>
+    <li>You prefer HMAC signing over OIDC (simpler to implement in any language)</li>
+    <li>You want predictable flat-tier pricing instead of usage-based billing</li>
+    <li>You're a solo developer or small team without existing GCP infrastructure</li>
+  </ul>
+
+  <div class="cta-box">
+    <h3>No GCP required</h3>
+    <p>CronAPI schedules HTTP requests from any cloud or VPS. Get started in 60 seconds with a free account.</p>
+    <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+  </div>
+
+  <p>See also: <a href="/docs/vs-cron-job-org.html">CronAPI vs cron-job.org</a> &middot; <a href="/docs/vs-easycron.html">CronAPI vs EasyCron</a> &middot; <a href="/docs/comparison.html">Full comparison</a></p>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

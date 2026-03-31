@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI vs EasyCron: Which Is Better in 2026?</title>
+  <meta name="description" content="CronAPI vs EasyCron comparison: pricing, HMAC security, retry behavior, API design, and which cron service fits your use case." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/docs/vs-easycron.html" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 860px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.75rem; }
+    h3 { font-size: 1.1rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: #c9d1d9; }
+    p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    ul { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    li { margin-bottom: 0.5rem; }
+    strong { color: #e6edf3; }
+    .comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; background: #161b22; }
+    td { color: #c9d1d9; }
+    th:not(:first-child), td:not(:first-child) { text-align: center; }
+    tr:hover td { background: #161b22; }
+    .yes { color: #3fb950; font-weight: 600; }
+    .no { color: #6e7681; }
+    td:nth-child(2) { color: #58a6ff; font-weight: 600; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / <a href="/docs/comparison.html">Compare</a> / CronAPI vs EasyCron</div>
+
+  <h1>CronAPI vs EasyCron</h1>
+  <p>EasyCron is a long-running commercial cron service with a solid reliability record and a large user base. CronAPI is a newer service focused on developer experience, HMAC security, and API-first job management. Both are paid services at similar price points — here's how they differ.</p>
+
+  <h2>Pricing</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr><th>Plan</th><th>CronAPI</th><th>EasyCron</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Free</td><td>10 jobs, hourly min</td><td>1 job, hourly min</td></tr>
+        <tr><td>Entry paid</td><td>$9/mo — 100 jobs, per-min</td><td>~$7/mo — 20 jobs, per-min</td></tr>
+        <tr><td>Mid tier</td><td>—</td><td>~$14/mo — 100 jobs</td></tr>
+        <tr><td>Large scale</td><td>$29/mo — unlimited jobs</td><td>~$25/mo — 500 jobs cap</td></tr>
+        <tr><td>Billing model</td><td>Flat tiers</td><td>Flat tiers</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Pricing summary:</strong> EasyCron is slightly cheaper at the entry tier but caps at 500 jobs on the highest plan. CronAPI's $29/mo plan has no job limit. For teams with large numbers of jobs, CronAPI is better value.</p>
+
+  <h2>Feature Comparison</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>CronAPI</th><th>EasyCron</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>HMAC request signing</td><td class="yes">Yes (every request)</td><td class="no">No</td></tr>
+        <tr><td>Automatic retries</td><td class="yes">Yes (3 attempts, backoff)</td><td class="yes">Yes</td></tr>
+        <tr><td>Execution ID for idempotency</td><td class="yes">Yes</td><td class="no">No</td></tr>
+        <tr><td>REST API</td><td class="yes">Yes (full CRUD)</td><td class="yes">Yes</td></tr>
+        <tr><td>Execution history</td><td class="yes">Full history on paid</td><td class="yes">Yes</td></tr>
+        <tr><td>Web dashboard</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom HTTP headers</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom request body</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Unlimited jobs</td><td class="yes">Yes ($29/mo)</td><td class="no">500 job cap</td></tr>
+        <tr><td>Setup time</td><td>~1 min</td><td>~5 min</td></tr>
+        <tr><td>Years in operation</td><td>2026 (new)</td><td>Since ~2012</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Where CronAPI Wins</h2>
+  <ul>
+    <li><strong>HMAC signing.</strong> CronAPI signs every outbound request with HMAC-SHA256. EasyCron does not. If your endpoint needs to verify requests came from your scheduler — which is basic security hygiene — EasyCron doesn't support this pattern.</li>
+    <li><strong>No job cap.</strong> EasyCron caps at 500 jobs on the highest plan. CronAPI's Pro plan ($29/mo) has no cap.</li>
+    <li><strong>API-first design.</strong> CronAPI is built for programmatic management — register jobs from your deployment pipeline, not from a dashboard.</li>
+    <li><strong>Free tier depth.</strong> CronAPI's free tier offers 10 jobs versus EasyCron's 1 job. More room to experiment before paying.</li>
+  </ul>
+
+  <h2>Where EasyCron Wins</h2>
+  <ul>
+    <li><strong>Established track record.</strong> EasyCron has been operating since approximately 2012. That's 14+ years of production history. CronAPI is new.</li>
+    <li><strong>Entry price.</strong> EasyCron's entry paid tier is ~$7/mo versus CronAPI's $9/mo.</li>
+    <li><strong>Community and documentation.</strong> Years of Stack Overflow answers, tutorials, and community knowledge around EasyCron integrations.</li>
+  </ul>
+
+  <h2>When to Choose Each</h2>
+
+  <p><strong>Choose EasyCron if:</strong> proven commercial reliability is your top priority, you manage jobs primarily through a dashboard, and you don't require request signing or programmatic job management.</p>
+
+  <p><strong>Choose CronAPI if:</strong> you want HMAC-signed requests, API-first job management, no hard job limits, and a simpler pricing structure. CronAPI is particularly well-suited for teams who create and manage jobs programmatically rather than through a UI.</p>
+
+  <div class="cta-box">
+    <h3>Try CronAPI — HMAC signing included</h3>
+    <p>Free tier includes 10 jobs. No credit card required. Every request is signed out of the box.</p>
+    <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+  </div>
+
+  <p>See also: <a href="/docs/vs-cron-job-org.html">CronAPI vs cron-job.org</a> &middot; <a href="/docs/vs-google-cloud-scheduler.html">CronAPI vs Google Cloud Scheduler</a> &middot; <a href="/docs/comparison.html">Full comparison</a></p>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

@@ -5,6 +5,102 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CronAPI — Schedule HTTP Jobs in Seconds</title>
   <meta name="description" content="CronAPI triggers your HTTP endpoints on a cron schedule — no DevOps, no boilerplate. Webhook retries, HMAC signatures, execution history, and a web dashboard included." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "@id": "https://cronapi.up.railway.app/#app",
+        "name": "CronAPI",
+        "url": "https://cronapi.up.railway.app",
+        "description": "CronAPI triggers your HTTP endpoints on a cron schedule — no DevOps, no boilerplate. Webhook retries, HMAC signatures, execution history, and a web dashboard included.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Free",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "10 jobs, hourly minimum scheduling, 50-entry execution history"
+          },
+          {
+            "@type": "Offer",
+            "name": "Indie",
+            "price": "9",
+            "priceCurrency": "USD",
+            "priceSpecification": { "@type": "UnitPriceSpecification", "price": "9", "priceCurrency": "USD", "unitText": "MONTH" },
+            "description": "100 jobs, per-minute scheduling, unlimited execution history"
+          },
+          {
+            "@type": "Offer",
+            "name": "Pro",
+            "price": "29",
+            "priceCurrency": "USD",
+            "priceSpecification": { "@type": "UnitPriceSpecification", "price": "29", "priceCurrency": "USD", "unitText": "MONTH" },
+            "description": "Unlimited jobs, per-minute scheduling, priority support"
+          }
+        ],
+        "featureList": [
+          "Cron expression scheduling",
+          "HMAC-SHA256 request signing",
+          "Automatic webhook retries with exponential backoff",
+          "Full execution history with HTTP status and response body",
+          "Web dashboard for job management",
+          "REST API for programmatic job control",
+          "Custom HTTP headers and request body",
+          "No server management required"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is CronAPI?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CronAPI is a managed cron job API that fires HTTP requests to your endpoints on a schedule. You register a job with a URL and cron expression, and CronAPI handles execution, retries, and logging — no server required."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does CronAPI compare to a cron server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Unlike a traditional cron server, CronAPI provides automatic retries on failure, full execution history, HMAC request signing, and a web dashboard — without requiring you to maintain any server infrastructure."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is CronAPI free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The Free plan includes 10 jobs with hourly minimum scheduling and 50 execution history entries. No credit card required. Paid plans (Indie at $9/mo, Pro at $29/mo) unlock per-minute scheduling and higher job limits."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I verify requests came from CronAPI?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CronAPI signs every request with an HMAC-SHA256 signature in the X-CronAPI-Signature header. Your endpoint can verify this signature using a shared secret to confirm the request is genuine."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://cronapi.up.railway.app/#org",
+        "name": "CronAPI",
+        "url": "https://cronapi.up.railway.app",
+        "logo": "https://cronapi.up.railway.app/favicon.png"
+      }
+    ]
+  }
+  </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
@@ -159,11 +255,11 @@
   <div class="logo">CronAPI</div>
   <nav>
     <a href="#features">Features</a>
-    <a href="#how-it-works">How it works</a>
     <a href="#pricing">Pricing</a>
-    <a href="docs/comparison.html">Compare</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
     <a href="/api/docs">API Docs</a>
-    <a href="/health">Status</a>
     <a href="#waitlist" class="nav-cta">Get access</a>
   </nav>
 </header>
@@ -502,10 +598,12 @@
         <a href="/api/docs">API playground</a>
         <a href="https://github.com/iuribpmoro/cronapi">GitHub</a>
         <a href="/DOCS.md">API reference</a>
-        <a href="docs/comparison.html">Compare alternatives</a>
+        <a href="/docs/comparison.html">Compare alternatives</a>
       </div>
       <div class="footer-col">
-        <h4>Company</h4>
+        <h4>Resources</h4>
+        <a href="/blog/">Blog</a>
+        <a href="/changelog.html">Changelog</a>
         <a href="#waitlist">Early access</a>
         <a href="mailto:hello@cronapi.dev">Contact</a>
       </div>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building a Reliable Webhook Scheduler: The Developer's Handbook — CronAPI</title>
+  <meta name="description" content="Everything you need to know about webhook schedulers: retry logic, HMAC security, cron expressions, and debugging in production. With real code examples." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/blog/webhook-scheduler-guide.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Building a Reliable Webhook Scheduler: The Developer's Handbook",
+    "description": "Everything you need to know about webhook schedulers: retry logic, HMAC security, cron expressions, and debugging in production.",
+    "author": { "@type": "Organization", "name": "CronAPI" },
+    "publisher": { "@type": "Organization", "name": "CronAPI", "url": "https://cronapi.up.railway.app" },
+    "datePublished": "2026-03-31",
+    "dateModified": "2026-03-31",
+    "mainEntityOfPage": "https://cronapi.up.railway.app/blog/webhook-scheduler-guide.html"
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 760px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    .breadcrumb a:hover { color: #e6edf3; }
+    article h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    article h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.75rem; color: #e6edf3; }
+    article h3 { font-size: 1.15rem; font-weight: 700; margin: 1.75rem 0 0.5rem; color: #c9d1d9; }
+    article p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    article ul, article ol { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    article li { margin-bottom: 0.5rem; }
+    article strong { color: #e6edf3; }
+    article code { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.85em; font-family: 'Courier New', monospace; color: #79c0ff; }
+    article pre { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.875rem; line-height: 1.8; }
+    article pre code { background: none; border: none; padding: 0; color: #e6edf3; }
+    .post-meta { color: #8b949e; font-size: 0.875rem; margin-bottom: 2rem; display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .tag { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.8rem; color: #8b949e; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    .callout { background: #161b22; border-left: 3px solid #58a6ff; border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+    .callout p { margin: 0; }
+    .callout.warn { border-left-color: #e3b341; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Webhook Scheduler Guide</div>
+
+  <article>
+    <h1>Building a Reliable Webhook Scheduler: The Developer's Handbook</h1>
+    <div class="post-meta">
+      <span>March 31, 2026</span>
+      <span>10 min read</span>
+      <span class="tag">webhook scheduler</span>
+      <span class="tag">reliability</span>
+      <span class="tag">security</span>
+    </div>
+
+    <p>A <strong>webhook scheduler</strong> sends an HTTP request to your application on a cron schedule. It's the outbound counterpart to inbound webhooks — instead of waiting for an event to arrive, you schedule one to fire at a specific time.</p>
+
+    <p>Done right, a webhook scheduler gives you reliable, observable, secure scheduled execution with zero infrastructure overhead. Done wrong, you get silent failures, duplicate executions, and endpoints that anyone can trigger by guessing a URL.</p>
+
+    <p>This guide covers everything you need to build production-grade scheduled webhooks: retry strategies, idempotency, HMAC verification, monitoring, and common failure modes.</p>
+
+    <h2>What Is a Webhook Scheduler?</h2>
+
+    <p>A webhook scheduler is a service (or component) responsible for:</p>
+    <ul>
+      <li>Storing a list of jobs with their target URLs and cron schedules</li>
+      <li>Firing the correct HTTP request at the scheduled time</li>
+      <li>Handling retries when the request fails</li>
+      <li>Recording what happened for debugging and auditing</li>
+    </ul>
+
+    <p>You could build this yourself — a Node.js service with <code>node-cron</code>, a job queue, and a database. But most developers find they spend more time maintaining the scheduler than building their actual product. That's why dedicated webhook scheduler APIs exist.</p>
+
+    <h2>Designing Your Webhook Endpoint</h2>
+
+    <p>The endpoint that receives scheduled webhooks has specific requirements that differ from regular API endpoints. Get these right first.</p>
+
+    <h3>Make it idempotent</h3>
+
+    <p>Network conditions and retry logic mean your endpoint may receive the same webhook more than once. Design it so running the job twice produces the same result as running it once.</p>
+
+    <p>For example, don't do:</p>
+    <pre><code>// Fragile: duplicate execution doubles the charge
+await chargeUser(userId, amount);
+await recordCharge(userId, amount);</code></pre>
+
+    <p>Do this instead:</p>
+    <pre><code>// Idempotent: uses a unique execution ID as a deduplication key
+async function processScheduledCharge(executionId, userId, amount) {
+  const existing = await db.charges.findByExecutionId(executionId);
+  if (existing) return { status: 'already_processed' };
+
+  await db.transaction(async (tx) => {
+    await tx.charges.insert({ executionId, userId, amount });
+    await tx.billing.charge(userId, amount);
+  });
+
+  return { status: 'processed' };
+}</code></pre>
+
+    <p>CronAPI includes the execution ID in request headers (<code>X-CronAPI-Execution-Id</code>) for exactly this purpose.</p>
+
+    <h3>Return fast, process async</h3>
+
+    <p>Webhook schedulers typically have request timeouts in the 10–30 second range. If your job takes longer than that, the scheduler sees a timeout and retries — which can cause double execution.</p>
+
+    <p>The pattern: accept the webhook, enqueue the real work, return <code>202 Accepted</code> immediately.</p>
+    <pre><code>app.post('/api/cron/nightly-report', async (req, res) => {
+  // Verify the signature first (covered below)
+  if (!verifyCronAPISignature(req)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  // Enqueue the work — don't await it
+  await queue.push('generate-nightly-report', { triggeredAt: new Date() });
+
+  // Respond immediately so the scheduler doesn't timeout
+  res.status(202).json({ queued: true });
+});</code></pre>
+
+    <h2>Securing Your Webhook Endpoint</h2>
+
+    <p>A webhook endpoint URL that accepts POST requests is essentially a public API. Without authentication, anyone who discovers the URL can trigger your scheduled jobs — intentionally or accidentally.</p>
+
+    <h3>HMAC signature verification</h3>
+
+    <p>The standard pattern is HMAC-SHA256 signing. The scheduler signs each request with a shared secret. Your endpoint verifies the signature before processing.</p>
+
+    <p>CronAPI signs every request with a header: <code>X-CronAPI-Signature: sha256=&lt;hex-digest&gt;</code></p>
+
+    <p>Here's how to verify it in Node.js:</p>
+    <pre><code>const crypto = require('crypto');
+
+function verifyCronAPISignature(req, secret) {
+  const signatureHeader = req.headers['x-cronapi-signature'];
+  if (!signatureHeader) return false;
+
+  const [algorithm, receivedSig] = signatureHeader.split('=');
+  if (algorithm !== 'sha256') return false;
+
+  // Use the raw request body (before JSON.parse)
+  const body = typeof req.body === 'string'
+    ? req.body
+    : JSON.stringify(req.body);
+
+  const expectedSig = crypto
+    .createHmac('sha256', secret)
+    .update(body, 'utf8')
+    .digest('hex');
+
+  // Constant-time comparison to prevent timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(receivedSig, 'hex'),
+    Buffer.from(expectedSig, 'hex')
+  );
+}</code></pre>
+
+    <div class="callout warn">
+      <p><strong>Important:</strong> Always use <code>crypto.timingSafeEqual</code> for signature comparison. String comparison (<code>===</code>) is vulnerable to timing attacks that can reveal your secret.</p>
+    </div>
+
+    <p>The same pattern in Python:</p>
+    <pre><code>import hmac
+import hashlib
+
+def verify_cronapi_signature(body: bytes, signature_header: str, secret: str) -> bool:
+    if not signature_header or not signature_header.startswith('sha256='):
+        return False
+
+    received_sig = signature_header[7:]  # strip 'sha256='
+    expected_sig = hmac.new(
+        secret.encode('utf-8'),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(received_sig, expected_sig)</code></pre>
+
+    <h2>Retry Strategies</h2>
+
+    <p>Even well-designed endpoints fail sometimes. Deployments, network blips, and temporary overload are facts of life. Your webhook scheduler's retry strategy determines whether a transient failure is recoverable or a lost execution.</p>
+
+    <h3>Exponential backoff</h3>
+
+    <p>The standard pattern is exponential backoff — each retry waits longer than the last. This prevents a recovering service from being hammered by retries:</p>
+
+    <ul>
+      <li>Attempt 1: immediate</li>
+      <li>Attempt 2: 30 seconds later</li>
+      <li>Attempt 3: 5 minutes later</li>
+      <li>Attempt 4: give up and log failure</li>
+    </ul>
+
+    <p>CronAPI uses 3 retry attempts with exponential backoff. Each failed execution (including retries) is visible in your execution history with the exact HTTP status code and response body.</p>
+
+    <h3>What counts as a failure?</h3>
+
+    <p>Configure your endpoint to be explicit about success and failure:</p>
+    <ul>
+      <li><strong>2xx</strong>: success, stop retrying</li>
+      <li><strong>4xx</strong>: client error — your job is misconfigured, retrying won't help. The scheduler should stop and alert you.</li>
+      <li><strong>5xx</strong>: server error — transient failure, retry is appropriate</li>
+      <li><strong>Timeout</strong>: treated as a 5xx — retry</li>
+    </ul>
+
+    <p>Return appropriate status codes from your endpoint. Returning <code>200 OK</code> for everything — including errors — makes it impossible for the scheduler to distinguish transient from permanent failures.</p>
+
+    <h2>Cron Expression Reference</h2>
+
+    <p>Webhook schedulers use standard 5-field cron expressions:</p>
+    <pre><code>┌─────────── minute (0-59)
+│ ┌─────────── hour (0-23)
+│ │ ┌─────────── day of month (1-31)
+│ │ │ ┌─────────── month (1-12)
+│ │ │ │ ┌─────────── day of week (0-7, 0 and 7 = Sunday)
+│ │ │ │ │
+* * * * *</code></pre>
+
+    <p>Common patterns:</p>
+    <pre><code>0 * * * *     # Every hour at minute 0
+0 9 * * *     # Every day at 9:00 AM
+0 9 * * 1     # Every Monday at 9:00 AM
+0 0 1 * *     # First day of every month at midnight
+*/15 * * * *  # Every 15 minutes
+0 9-17 * * 1-5  # Hourly between 9 AM and 5 PM, weekdays only</code></pre>
+
+    <div class="callout">
+      <p><strong>Timezone note:</strong> Cron expressions are typically evaluated in UTC unless your scheduler supports timezone configuration. Midnight UTC is 5 PM PST — confirm what timezone your scheduler uses before setting up time-sensitive jobs.</p>
+    </div>
+
+    <h2>Monitoring and Alerting</h2>
+
+    <p>The difference between "it's probably running" and "I can prove it ran correctly" is observable execution history.</p>
+
+    <p>At minimum, track:</p>
+    <ul>
+      <li>Last successful execution time</li>
+      <li>Last failure and its error message</li>
+      <li>Consecutive failure count</li>
+    </ul>
+
+    <p>Set up an alert if a job hasn't succeeded in twice its expected interval. A job scheduled to run every hour that hasn't succeeded in two hours is a problem worth knowing about.</p>
+
+    <p>CronAPI surfaces all of this through the dashboard and the executions API:</p>
+    <pre><code>GET /api/v1/jobs/:jobId/executions
+Authorization: Bearer cron_live_...
+
+{
+  "executions": [
+    {
+      "id": "exec_abc123",
+      "status": "success",
+      "httpStatusCode": 200,
+      "responseBody": "{\"queued\":true}",
+      "durationMs": 142,
+      "executedAt": "2026-03-31T09:00:00.123Z"
+    }
+  ]
+}</code></pre>
+
+    <h2>Common Failure Modes</h2>
+
+    <h3>The endpoint returns 200 for everything</h3>
+    <p>If your endpoint catches all errors and returns 200, the scheduler thinks every execution succeeded. Retries never trigger. Problems disappear silently. Return accurate HTTP status codes.</p>
+
+    <h3>The job runs twice</h3>
+    <p>Two causes: your endpoint isn't idempotent and the scheduler retried due to a timeout, or you accidentally registered the job twice. Use the execution ID header for idempotency and check for duplicate job registrations.</p>
+
+    <h3>The endpoint takes too long</h3>
+    <p>The scheduler times out and retries. The original request may still be processing. Result: parallel execution of the same job. Fix by accepting quickly and processing asynchronously (see <em>Return fast, process async</em> above).</p>
+
+    <h3>The cron expression doesn't do what you think</h3>
+    <p>Test your cron expressions with a validator before deploying. <code>0 9 * * 1-5</code> runs on weekdays; <code>0 9 * * 1,5</code> runs only on Monday and Friday. These are easy to mix up.</p>
+
+    <div class="cta-box">
+      <h3>Skip the infrastructure, keep the reliability</h3>
+      <p>CronAPI is a webhook scheduler with HMAC signing, automatic retries, and full execution history. Get started free.</p>
+      <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+    </div>
+
+    <h2>Summary</h2>
+
+    <p>A reliable webhook scheduler combines three things: a well-designed endpoint (idempotent, returns fast, handles errors explicitly), a secure delivery mechanism (HMAC signatures, verified on every request), and observable execution history (so you know what ran, when, and what it returned).</p>
+
+    <p>Building your own scheduler is possible, but most teams find it's not worth the maintenance. A dedicated webhook scheduler API gives you all three properties out of the box — and lets you focus on the endpoints themselves.</p>
+
+    <p>Read next: <a href="/blog/cron-job-api-guide.html">What Is a Cron Job API? A Complete Guide for Developers</a></p>
+  </article>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

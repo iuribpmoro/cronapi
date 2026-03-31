@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI vs cron-job.org: Which Should You Use in 2026?</title>
+  <meta name="description" content="CronAPI vs cron-job.org: feature comparison, pricing, reliability, HMAC signing, and when to choose each service for scheduled HTTP requests." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/docs/vs-cron-job-org.html" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 860px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.75rem; }
+    h3 { font-size: 1.1rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: #c9d1d9; }
+    p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    ul { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    li { margin-bottom: 0.5rem; }
+    strong { color: #e6edf3; }
+    .comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; background: #161b22; }
+    td { color: #c9d1d9; }
+    th:not(:first-child), td:not(:first-child) { text-align: center; }
+    tr:hover td { background: #161b22; }
+    .yes { color: #3fb950; font-weight: 600; }
+    .no { color: #6e7681; }
+    td:nth-child(2) { color: #58a6ff; font-weight: 600; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    .winner-box { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0; }
+    .winner-box h3 { margin-top: 0; font-size: 1rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / <a href="/docs/comparison.html">Compare</a> / CronAPI vs cron-job.org</div>
+
+  <h1>CronAPI vs cron-job.org</h1>
+  <p>cron-job.org is one of the most popular free cron services. It has an extremely generous free tier and is community-funded. CronAPI is a paid service designed for developers who need stronger reliability guarantees, request signing, and API-first job management. Here's how they compare.</p>
+
+  <h2>Pricing</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr><th>Plan</th><th>CronAPI</th><th>cron-job.org</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Free jobs</td><td>10</td><td>Unlimited</td></tr>
+        <tr><td>Free min interval</td><td>60 min</td><td>1 min</td></tr>
+        <tr><td>Entry paid</td><td>$9/mo</td><td>~$5/mo</td></tr>
+        <tr><td>Paid jobs</td><td>100 (Indie)</td><td>More features, same job count</td></tr>
+        <tr><td>Unlimited jobs</td><td>$29/mo</td><td>Custom</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="winner-box">
+    <h3>Pricing winner</h3>
+    <p><strong>cron-job.org</strong> wins on price — especially the free tier, which offers unlimited jobs with per-minute scheduling at no cost. If price is your primary concern, cron-job.org is the clear choice.</p>
+  </div>
+
+  <h2>Feature Comparison</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>CronAPI</th><th>cron-job.org</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>HMAC request signing</td><td class="yes">Yes (every request)</td><td class="no">No</td></tr>
+        <tr><td>Automatic retries</td><td class="yes">Yes (3 attempts)</td><td class="no">Limited</td></tr>
+        <tr><td>Execution ID header</td><td class="yes">Yes (idempotency)</td><td class="no">No</td></tr>
+        <tr><td>Full REST API</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Execution history via API</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Web dashboard</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom headers</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom body</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Setup time</td><td>~1 min (API key)</td><td>~5 min (account + UI)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Where CronAPI Wins</h2>
+  <ul>
+    <li><strong>HMAC signing.</strong> Every request carries a cryptographic signature your endpoint can verify. cron-job.org sends unauthenticated requests — your endpoint can't distinguish a legitimate scheduler call from an attacker.</li>
+    <li><strong>Reliable retries.</strong> CronAPI automatically retries failed executions with exponential backoff. cron-job.org has limited retry support.</li>
+    <li><strong>API-first.</strong> CronAPI is designed to be controlled programmatically — register, update, and delete jobs from your deployment scripts without touching a dashboard.</li>
+    <li><strong>Execution ID.</strong> CronAPI includes a unique execution ID in every request header, making idempotent endpoint design straightforward.</li>
+  </ul>
+
+  <h2>Where cron-job.org Wins</h2>
+  <ul>
+    <li><strong>Free tier.</strong> Unlimited jobs with per-minute scheduling at zero cost. Unmatched for side projects and development environments.</li>
+    <li><strong>Price at scale.</strong> For high job counts, cron-job.org is significantly cheaper.</li>
+    <li><strong>Established service.</strong> cron-job.org has been running for many years with a well-known reliability track record.</li>
+  </ul>
+
+  <h2>When to Choose Each</h2>
+
+  <p><strong>Choose cron-job.org if:</strong> you're building a side project, want free per-minute scheduling, don't need HMAC security, and are comfortable with a dashboard-first workflow.</p>
+
+  <p><strong>Choose CronAPI if:</strong> you're building a production service that needs request authentication, automatic retries, and programmatic job management. If your endpoint verifies signatures before processing — which it should — cron-job.org's lack of HMAC signing is a blocker.</p>
+
+  <div class="cta-box">
+    <h3>Try CronAPI free</h3>
+    <p>10 jobs, hourly scheduling, HMAC signing included. No credit card required.</p>
+    <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+  </div>
+
+  <p>See also: <a href="/docs/vs-easycron.html">CronAPI vs EasyCron</a> &middot; <a href="/docs/vs-google-cloud-scheduler.html">CronAPI vs Google Cloud Scheduler</a> &middot; <a href="/docs/comparison.html">Full comparison</a></p>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

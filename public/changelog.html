@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Changelog — CronAPI</title>
+  <meta name="description" content="What's new in CronAPI — feature releases, improvements, and fixes." />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "CronAPI Changelog",
+    "description": "What's new in CronAPI — feature releases, improvements, and fixes.",
+    "url": "https://cronapi.up.railway.app/changelog.html"
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 760px; margin: 3rem auto; padding: 0 2rem; }
+    .page-title { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .page-sub { color: #8b949e; margin-bottom: 3rem; }
+    .entries { position: relative; }
+    .entries::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 0;
+      width: 2px;
+      background: #21262d;
+    }
+    .entry { padding-left: 2rem; margin-bottom: 3rem; position: relative; }
+    .entry::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: 8px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #238636;
+      border: 2px solid #0d1117;
+    }
+    .entry-date { font-size: 0.8rem; color: #6e7681; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+    .entry-version { display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .version-badge { background: #161b22; border: 1px solid #21262d; border-radius: 6px; padding: 0.2rem 0.65rem; font-size: 0.8rem; font-weight: 700; color: #e6edf3; font-family: 'Courier New', monospace; }
+    .badge { border-radius: 12px; padding: 0.15rem 0.6rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .badge-feature { background: #1a3a1a; color: #3fb950; border: 1px solid #238636; }
+    .badge-fix { background: #1a1a3a; color: #79c0ff; border: 1px solid #1f6feb; }
+    .badge-improvement { background: #3a2a1a; color: #e3b341; border: 1px solid #9e6a03; }
+    .entry h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .entry p { color: #8b949e; font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .change-list { list-style: none; margin: 0; }
+    .change-list li { display: flex; gap: 0.75rem; padding: 0.4rem 0; font-size: 0.875rem; color: #c9d1d9; border-bottom: 1px solid #161b22; align-items: flex-start; }
+    .change-list li:last-child { border-bottom: none; }
+    .change-icon { flex-shrink: 0; margin-top: 2px; }
+    .change-icon.feature { color: #3fb950; }
+    .change-icon.fix { color: #79c0ff; }
+    .change-icon.improvement { color: #e3b341; }
+    code { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.85em; font-family: 'Courier New', monospace; color: #79c0ff; }
+    .subscribe-box { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem 2rem; margin-bottom: 3rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .subscribe-box p { color: #8b949e; font-size: 0.875rem; margin: 0; }
+    .subscribe-box a { font-size: 0.875rem; color: #58a6ff; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <h1 class="page-title">Changelog</h1>
+  <p class="page-sub">New features, improvements, and fixes — updated with each release.</p>
+
+  <div class="subscribe-box">
+    <p>Get notified when new features ship. Join the waitlist for release announcements.</p>
+    <a href="/#waitlist">Join waitlist &rarr;</a>
+  </div>
+
+  <div class="entries">
+
+    <!-- v0.9.0 -->
+    <div class="entry">
+      <div class="entry-date">March 31, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.9.0</span>
+        <span class="badge badge-feature">Feature</span>
+      </div>
+      <h2>Uptime monitoring &amp; structured error alerting</h2>
+      <p>New monitoring infrastructure tracks job health and surfaces structured error data through the dashboard and status API.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Added <code>/status</code> endpoint exposing active job count, next scheduled run, and most recent failure detail</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Structured error alerting — failed executions include HTTP status code, error message, and job ID in webhook alerts</span>
+        </li>
+        <li>
+          <span class="change-icon improvement">●</span>
+          <span>Uptime tracking added to <code>/health</code> response; includes database and scheduler status</span>
+        </li>
+        <li>
+          <span class="change-icon fix">●</span>
+          <span>Fixed an edge case where scheduler reported <code>running</code> status incorrectly on cold start</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- v0.8.0 -->
+    <div class="entry">
+      <div class="entry-date">March 28, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.8.0</span>
+        <span class="badge badge-fix">Fix</span>
+        <span class="badge badge-improvement">Improvement</span>
+      </div>
+      <h2>Stripe webhook reliability improvements</h2>
+      <p>Fixed webhook signature verification and subscription line item expansion that caused paid plan activations to fail intermittently.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon fix">●</span>
+          <span>Raw body now captured before JSON parsing for correct Stripe HMAC signature verification</span>
+        </li>
+        <li>
+          <span class="change-icon fix">●</span>
+          <span>Expanded <code>line_items</code> in <code>checkout.session.completed</code> handler — fixes plan not activating after payment</span>
+        </li>
+        <li>
+          <span class="change-icon improvement">●</span>
+          <span>Added <code>notify_url</code> and <code>retry_count</code> columns to job executions schema for richer failure tracking</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- v0.7.0 -->
+    <div class="entry">
+      <div class="entry-date">March 22, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.7.0</span>
+        <span class="badge badge-feature">Feature</span>
+      </div>
+      <h2>Web dashboard — job management UI</h2>
+      <p>A full web dashboard for managing cron jobs without the CLI. View job status, execution history, and pause or delete jobs from the browser.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Job list view with real-time status indicators (active, paused, failing)</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Per-job execution history with HTTP status codes, response bodies, and latency graphs</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>One-click pause and resume for individual jobs</span>
+        </li>
+        <li>
+          <span class="change-icon improvement">●</span>
+          <span>Cookie-based auth session for dashboard — no API key required in browser</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- v0.6.0 -->
+    <div class="entry">
+      <div class="entry-date">March 15, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.6.0</span>
+        <span class="badge badge-feature">Feature</span>
+      </div>
+      <h2>HMAC request signing</h2>
+      <p>Every outbound job request is now signed with an HMAC-SHA256 signature, allowing your endpoints to verify requests genuinely come from CronAPI.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Added <code>X-CronAPI-Signature: sha256=&lt;digest&gt;</code> header to all outbound job requests</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Webhook secret configurable per-job via <code>webhookSecret</code> field on job creation</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Added <code>X-CronAPI-Execution-Id</code> header for idempotency key support</span>
+        </li>
+        <li>
+          <span class="change-icon improvement">●</span>
+          <span>Signature verification examples added to API docs for Node.js, Python, and Go</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- v0.5.0 -->
+    <div class="entry">
+      <div class="entry-date">March 8, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.5.0</span>
+        <span class="badge badge-feature">Feature</span>
+      </div>
+      <h2>Pricing plans &amp; Stripe billing</h2>
+      <p>Free, Indie ($9/mo), and Pro ($29/mo) plans with Stripe checkout. Paid plans unlock per-minute scheduling and higher job limits.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Free tier: 10 jobs, hourly minimum scheduling, 50-entry execution history</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Indie tier ($9/mo): 100 jobs, per-minute scheduling, unlimited execution history</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Pro tier ($29/mo): unlimited jobs, per-minute scheduling, priority support</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Stripe Checkout integration with subscription management via customer portal</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- v0.4.0 -->
+    <div class="entry">
+      <div class="entry-date">February 28, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.4.0</span>
+        <span class="badge badge-feature">Feature</span>
+      </div>
+      <h2>Webhook retries with exponential backoff</h2>
+      <p>Failed job executions are now automatically retried up to 3 times with exponential backoff. No lost executions from transient failures.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Automatic retry on HTTP 5xx, timeout, or connection error</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Exponential backoff: retry 1 at 30s, retry 2 at 5m, retry 3 at 30m</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Each retry logged separately with its own HTTP status and response body</span>
+        </li>
+        <li>
+          <span class="change-icon improvement">●</span>
+          <span>No retry on HTTP 4xx — client errors indicate misconfiguration, not transient failure</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- v0.1.0 -->
+    <div class="entry">
+      <div class="entry-date">February 1, 2026</div>
+      <div class="entry-version">
+        <span class="version-badge">v0.1.0</span>
+        <span class="badge badge-feature">Launch</span>
+      </div>
+      <h2>Initial release — schedule HTTP jobs via API</h2>
+      <p>CronAPI launches in early access. Schedule HTTP requests on a cron schedule without managing cron servers.</p>
+      <ul class="change-list">
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>REST API for creating, updating, pausing, and deleting cron jobs</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Full cron expression support (5-field standard syntax)</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>Execution history with HTTP status, response body, and latency per run</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>API key authentication with <code>cron_live_</code> prefixed keys</span>
+        </li>
+        <li>
+          <span class="change-icon feature">●</span>
+          <span>OpenAPI spec and interactive docs at <code>/api/docs</code></span>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/#waitlist">Get access</a></p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI vs Alternatives: Honest Comparison for Developers</title>
+  <meta name="description" content="Compare CronAPI to cron-job.org, EasyCron, and Google Cloud Scheduler. Pricing, features, reliability, and developer experience — side by side." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/docs/comparison.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "CronAPI vs Alternatives: Comparison Guide",
+    "description": "Compare CronAPI to cron-job.org, EasyCron, and Google Cloud Scheduler. Pricing, features, and developer experience side by side.",
+    "url": "https://cronapi.up.railway.app/docs/comparison.html"
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 960px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    .page-title { font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .page-sub { color: #8b949e; max-width: 600px; margin-bottom: 3rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1rem; }
+    h3 { font-size: 1.15rem; font-weight: 700; margin: 2rem 0 0.75rem; }
+    p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    ul { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    li { margin-bottom: 0.5rem; }
+    strong { color: #e6edf3; }
+    .overview-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+    .overview-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.25rem; }
+    .overview-card h3 { margin: 0 0 0.5rem; font-size: 1rem; }
+    .overview-card p { font-size: 0.875rem; margin: 0; }
+    .comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; min-width: 640px; }
+    th, td { padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; background: #161b22; }
+    th:not(:first-child) { text-align: center; }
+    td:not(:first-child) { text-align: center; }
+    tr:hover td { background: #161b22; }
+    .yes { color: #3fb950; font-weight: 600; }
+    .no { color: #6e7681; }
+    .partial { color: #e3b341; }
+    .highlight-col { color: #58a6ff; font-weight: 700; }
+    td:nth-child(2) { color: #58a6ff; font-weight: 600; }
+    .section-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem 2rem; margin: 2rem 0; }
+    .section-card h3 { margin-top: 0; }
+    .verdict-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin: 2rem 0; }
+    .verdict { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.25rem; }
+    .verdict-title { font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .verdict p { font-size: 0.875rem; color: #8b949e; margin: 0; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    .toc { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 2.5rem; display: inline-block; }
+    .toc h4 { font-size: 0.875rem; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .toc ol { margin: 0 0 0 1.25rem; }
+    .toc li { font-size: 0.875rem; margin-bottom: 0.35rem; }
+    .individual-links { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1.5rem 0; }
+    .individual-links a { background: #161b22; border: 1px solid #21262d; border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.875rem; color: #8b949e; }
+    .individual-links a:hover { color: #e6edf3; text-decoration: none; border-color: #30363d; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / Comparison</div>
+
+  <h1 class="page-title">CronAPI vs. The Alternatives</h1>
+  <p class="page-sub">An honest comparison of cron job services for developers. We've tried to be fair — including the cases where competitors win.</p>
+
+  <div class="individual-links">
+    <a href="/docs/vs-cron-job-org.html">CronAPI vs cron-job.org &rarr;</a>
+    <a href="/docs/vs-easycron.html">CronAPI vs EasyCron &rarr;</a>
+    <a href="/docs/vs-google-cloud-scheduler.html">CronAPI vs Google Cloud Scheduler &rarr;</a>
+  </div>
+
+  <div class="toc">
+    <h4>On this page</h4>
+    <ol>
+      <li><a href="#overview">At a glance</a></li>
+      <li><a href="#pricing">Pricing comparison</a></li>
+      <li><a href="#features">Feature matrix</a></li>
+      <li><a href="#developer-experience">Developer experience</a></li>
+      <li><a href="#verdicts">Who should use what</a></li>
+    </ol>
+  </div>
+
+  <h2 id="overview">At a Glance</h2>
+
+  <div class="overview-cards">
+    <div class="overview-card">
+      <h3>CronAPI</h3>
+      <p>Minimal cron job API built for developers. HMAC signing, retries, execution history. Simple flat pricing.</p>
+    </div>
+    <div class="overview-card">
+      <h3>cron-job.org</h3>
+      <p>Free, community-funded cron service. Generous free tier. Limited API integration features.</p>
+    </div>
+    <div class="overview-card">
+      <h3>EasyCron</h3>
+      <p>Long-running commercial cron service. Solid reliability, larger job counts at higher tiers.</p>
+    </div>
+    <div class="overview-card">
+      <h3>Google Cloud Scheduler</h3>
+      <p>Enterprise-grade scheduled jobs within Google Cloud. Best when already deep in GCP infrastructure.</p>
+    </div>
+  </div>
+
+  <h2 id="pricing">Pricing Comparison</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Plan</th>
+          <th>CronAPI</th>
+          <th>cron-job.org</th>
+          <th>EasyCron</th>
+          <th>Google Cloud Scheduler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Free tier</td>
+          <td>10 jobs, hourly min</td>
+          <td>Unlimited jobs, 1-min min</td>
+          <td>1 job, hourly min</td>
+          <td>3 jobs, usage-metered</td>
+        </tr>
+        <tr>
+          <td>Entry paid</td>
+          <td>$9/mo — 100 jobs, per-min</td>
+          <td>~$5/mo — extended features</td>
+          <td>~$7/mo — 20 jobs, per-min</td>
+          <td>~$0.10 per job/month + invocation fees</td>
+        </tr>
+        <tr>
+          <td>Mid-tier</td>
+          <td>—</td>
+          <td>~$10/mo</td>
+          <td>~$14/mo — 100 jobs</td>
+          <td>Usage scales with invocations</td>
+        </tr>
+        <tr>
+          <td>Unlimited jobs</td>
+          <td>$29/mo</td>
+          <td>Custom</td>
+          <td>~$25/mo (500 jobs cap)</td>
+          <td>No hard limit; usage-based</td>
+        </tr>
+        <tr>
+          <td>Billing model</td>
+          <td>Flat tiers</td>
+          <td>Flat tiers / donation</td>
+          <td>Flat tiers</td>
+          <td>Pay-per-use</td>
+        </tr>
+        <tr>
+          <td>Predictable monthly cost</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="partial">Depends on volume</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Verdict:</strong> cron-job.org has the most generous free tier by far (unlimited jobs with per-minute scheduling). CronAPI and EasyCron are comparable on pricing at the $9–10/month entry tier. Google Cloud Scheduler is cheapest at small scale but hard to predict at volume.</p>
+
+  <h2 id="features">Feature Matrix</h2>
+
+  <div class="comparison-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>CronAPI</th>
+          <th>cron-job.org</th>
+          <th>EasyCron</th>
+          <th>Google Cloud Scheduler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Cron expression scheduling</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes (rate/cron)</td>
+        </tr>
+        <tr>
+          <td>Per-minute scheduling (free)</td>
+          <td class="no">No (paid)</td>
+          <td class="yes">Yes</td>
+          <td class="no">No (paid)</td>
+          <td class="yes">Yes (metered)</td>
+        </tr>
+        <tr>
+          <td>Automatic retries</td>
+          <td class="yes">Yes (3 attempts)</td>
+          <td class="partial">Limited</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes (configurable)</td>
+        </tr>
+        <tr>
+          <td>HMAC request signing</td>
+          <td class="yes">Yes (every request)</td>
+          <td class="no">No</td>
+          <td class="no">No</td>
+          <td class="partial">OAuth/OIDC tokens</td>
+        </tr>
+        <tr>
+          <td>Execution history / logs</td>
+          <td class="yes">Yes (full history paid)</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">CloudWatch / Cloud Logging</td>
+        </tr>
+        <tr>
+          <td>REST API for job management</td>
+          <td class="yes">Yes (full CRUD)</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes (GCP API)</td>
+        </tr>
+        <tr>
+          <td>Web dashboard</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">GCP Console</td>
+        </tr>
+        <tr>
+          <td>Custom HTTP headers</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+        </tr>
+        <tr>
+          <td>Custom request body</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+        </tr>
+        <tr>
+          <td>No GCP/AWS account required</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="yes">Yes</td>
+          <td class="no">No</td>
+        </tr>
+        <tr>
+          <td>Setup time</td>
+          <td>~1 min</td>
+          <td>~5 min</td>
+          <td>~5 min</td>
+          <td>~20 min</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="developer-experience">Developer Experience</h2>
+
+  <h3>CronAPI</h3>
+  <p>Register a job with a single POST request. API key from registration. No dashboard tour required. HMAC signing included without configuration — every job gets a signature. Execution history accessible via API. <strong>Best for:</strong> developers who want minimal configuration and to get a job running in under 60 seconds.</p>
+
+  <h3>cron-job.org</h3>
+  <p>Free, well-established service with a clean web UI. No API key required for the free tier. Good for quick one-off job setup. Less suited to programmatic job management (API feels secondary to the dashboard). <strong>Best for:</strong> simple use cases where you want free per-minute scheduling and don't need HMAC or strong retry guarantees.</p>
+
+  <h3>EasyCron</h3>
+  <p>Solid commercial service with a long track record. Dashboard-first UX. API available on paid plans. No request signing. <strong>Best for:</strong> teams who want a proven commercial service and manage jobs primarily through the UI.</p>
+
+  <h3>Google Cloud Scheduler</h3>
+  <p>Powerful but requires GCP setup: project, service account, IAM permissions, enabling APIs. Integrates natively with Cloud Run, Cloud Functions, and Pub/Sub. Steep initial setup. Excellent once you're in the GCP ecosystem. <strong>Best for:</strong> teams already running on GCP who want native integrations.</p>
+
+  <h2 id="verdicts">Who Should Use What</h2>
+
+  <div class="verdict-grid">
+    <div class="verdict">
+      <div class="verdict-title">⚡ Fastest start</div>
+      <p><strong>CronAPI</strong> — register and schedule your first job in under 60 seconds with a single curl command.</p>
+    </div>
+    <div class="verdict">
+      <div class="verdict-title">💸 Best free tier</div>
+      <p><strong>cron-job.org</strong> — unlimited jobs with per-minute scheduling on the free tier. Nothing else comes close.</p>
+    </div>
+    <div class="verdict">
+      <div class="verdict-title">🔐 Best security</div>
+      <p><strong>CronAPI</strong> — HMAC-SHA256 signing on every request, included by default. No configuration required.</p>
+    </div>
+    <div class="verdict">
+      <div class="verdict-title">☁️ Best for GCP teams</div>
+      <p><strong>Google Cloud Scheduler</strong> — native integrations with Cloud Run, Functions, and Pub/Sub make it unbeatable if you're already on GCP.</p>
+    </div>
+    <div class="verdict">
+      <div class="verdict-title">📊 Best observability</div>
+      <p><strong>CronAPI</strong> — full execution history with HTTP status codes, response bodies, and latency accessible via API and dashboard.</p>
+    </div>
+    <div class="verdict">
+      <div class="verdict-title">🏢 Enterprise track record</div>
+      <p><strong>EasyCron</strong> — long-running commercial service with an established reputation for reliability.</p>
+    </div>
+  </div>
+
+  <div class="cta-box">
+    <h3>See for yourself</h3>
+    <p>CronAPI free tier includes 10 jobs with hourly scheduling. No credit card, no GCP account, no infrastructure.</p>
+    <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

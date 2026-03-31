@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What Is a Cron Job API? A Complete Guide for Developers — CronAPI</title>
+  <meta name="description" content="A cron job API lets you schedule HTTP requests on a cron schedule without managing servers. Learn how they work, when to use one, and how to get started in minutes." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/blog/cron-job-api-guide.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "What Is a Cron Job API? A Complete Guide for Developers",
+    "description": "A cron job API lets you schedule HTTP requests on a cron schedule without managing servers. Learn how they work, when to use one, and how to get started in minutes.",
+    "author": { "@type": "Organization", "name": "CronAPI" },
+    "publisher": { "@type": "Organization", "name": "CronAPI", "url": "https://cronapi.up.railway.app" },
+    "datePublished": "2026-03-31",
+    "dateModified": "2026-03-31",
+    "mainEntityOfPage": "https://cronapi.up.railway.app/blog/cron-job-api-guide.html"
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 760px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    .breadcrumb a:hover { color: #e6edf3; }
+    article h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    article h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.75rem; color: #e6edf3; }
+    article h3 { font-size: 1.15rem; font-weight: 700; margin: 1.75rem 0 0.5rem; color: #c9d1d9; }
+    article p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    article ul, article ol { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    article li { margin-bottom: 0.5rem; }
+    article strong { color: #e6edf3; }
+    article code { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.85em; font-family: 'Courier New', monospace; color: #79c0ff; }
+    article pre { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.875rem; line-height: 1.8; }
+    article pre code { background: none; border: none; padding: 0; color: #e6edf3; }
+    .post-meta { color: #8b949e; font-size: 0.875rem; margin-bottom: 2rem; display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .tag { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.8rem; color: #8b949e; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.875rem; }
+    th, td { padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; background: #161b22; }
+    td { color: #c9d1d9; }
+    tr:hover td { background: #161b22; }
+    .callout { background: #161b22; border-left: 3px solid #58a6ff; border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+    .callout p { margin: 0; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Cron Job API Guide</div>
+
+  <article>
+    <h1>What Is a Cron Job API? A Complete Guide for Developers</h1>
+    <div class="post-meta">
+      <span>March 31, 2026</span>
+      <span>8 min read</span>
+      <span class="tag">cron job API</span>
+      <span class="tag">scheduling</span>
+      <span class="tag">devops</span>
+    </div>
+
+    <p>A <strong>cron job API</strong> is a cloud service that runs scheduled HTTP requests on your behalf. Instead of spinning up a server, writing a crontab, and hoping nothing goes wrong overnight — you call an API once to register a job, and the service handles execution, retries, and logging indefinitely.</p>
+
+    <p>This guide explains what cron job APIs are, how they compare to traditional cron, what to look for when choosing one, and how to get your first job running in under five minutes.</p>
+
+    <h2>The Traditional Cron Problem</h2>
+
+    <p>Linux <code>cron</code> has been around since the 1970s. It runs shell commands on a schedule. That's the full feature set. For modern web services built around HTTP APIs, this creates real friction:</p>
+
+    <ul>
+      <li><strong>Cron is tied to a single machine.</strong> If that machine goes down, your jobs stop silently. If you scale horizontally, you have to manually designate exactly one server to run cron — or you'll get duplicate executions.</li>
+      <li><strong>No built-in monitoring.</strong> Did the job run? Did it succeed? Unless you built custom alerting, you'll only know it failed when a customer complains.</li>
+      <li><strong>No retries.</strong> If your endpoint is briefly down at 2 AM, cron doesn't retry. The execution is gone.</li>
+      <li><strong>No history.</strong> By default, cron emails output to the local system user. There's no searchable log, no HTTP response code, no latency record.</li>
+    </ul>
+
+    <p>Cron works fine for local scripts on a single server. It doesn't fit well into distributed systems that speak HTTP.</p>
+
+    <h2>What Is a Cron Job API?</h2>
+
+    <p>A cron job API exposes HTTP endpoints that let you register, manage, and monitor scheduled jobs. You describe a job with:</p>
+    <ul>
+      <li>A <strong>target URL</strong> — the endpoint your service exposes</li>
+      <li>A <strong>cron expression</strong> — when to run (e.g., <code>0 * * * *</code> for every hour)</li>
+      <li>Optional: HTTP method, headers, request body</li>
+    </ul>
+
+    <p>The cron job API takes it from there. It fires your endpoint at the scheduled time, captures the HTTP response, and retries on failure. You get full execution history in a dashboard or via API — HTTP status, response body, latency, error messages.</p>
+
+    <div class="callout">
+      <p><strong>Key insight:</strong> Your application doesn't need a scheduler. It just needs to expose an HTTP endpoint. The cron job API is the scheduler. This separation of concerns makes your application code simpler and your infrastructure smaller.</p>
+    </div>
+
+    <h2>The Request Lifecycle</h2>
+
+    <p>Here's what happens when a cron job API fires a scheduled job:</p>
+
+    <ol>
+      <li>The scheduler wakes up at the scheduled time (based on the cron expression).</li>
+      <li>It constructs the HTTP request — method, headers, body — as you configured.</li>
+      <li>It optionally signs the request with an HMAC-SHA256 signature so your endpoint can verify its origin.</li>
+      <li>It sends the request and waits for a response (with a configurable timeout).</li>
+      <li>If it receives a 2xx response, the execution is logged as successful.</li>
+      <li>If it receives a non-2xx response or a timeout, it retries with exponential backoff.</li>
+      <li>The execution is logged: status code, response body, latency, retry count.</li>
+    </ol>
+
+    <p>The whole thing is observable at every step. That's the key difference from cron.</p>
+
+    <h2>When Should You Use a Cron Job API?</h2>
+
+    <table>
+      <thead>
+        <tr><th>Use case</th><th>Cron job API?</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Triggering nightly data exports</td><td>Yes</td><td>HTTP endpoint on your app, scheduled once</td></tr>
+        <tr><td>Sending weekly digest emails</td><td>Yes</td><td>POST to your mailer endpoint on schedule</td></tr>
+        <tr><td>Refreshing third-party API tokens</td><td>Yes</td><td>Reliable retries prevent auth failures</td></tr>
+        <tr><td>Local scripts with no HTTP surface</td><td>No</td><td>Stick with crontab or Task Scheduler</td></tr>
+        <tr><td>High-frequency ML model training</td><td>Maybe</td><td>Cloud schedulers may suit better at high volume</td></tr>
+        <tr><td>Polling an external API hourly</td><td>Yes</td><td>Endpoint hits your own polling handler</td></tr>
+      </tbody>
+    </table>
+
+    <p>The rule of thumb: if your scheduled task is an HTTP call, a cron job API is almost always better than a cron server. If it's a local shell command, local cron is simpler.</p>
+
+    <h2>What to Look for in a Cron Job API</h2>
+
+    <h3>1. Per-minute scheduling on the free tier</h3>
+    <p>Many services limit free accounts to hourly minimum intervals. For development and staging environments, per-minute scheduling matters. Check what the free tier actually supports before committing.</p>
+
+    <h3>2. Automatic retries with backoff</h3>
+    <p>Network hiccups and brief outages are real. A cron job API should retry failed executions automatically, with exponential backoff to avoid hammering a recovering service.</p>
+
+    <h3>3. HMAC request signing</h3>
+    <p>Anyone who knows your endpoint URL can trigger it. HMAC signatures let your endpoint verify that a request genuinely came from your scheduler — not an attacker or accidental trigger. Look for services that include this by default.</p>
+
+    <h3>4. Execution history and alerting</h3>
+    <p>A searchable log of every execution — with HTTP status codes, response bodies, and latency — is what separates "I think it ran" from "I can prove it ran and here's what it returned."</p>
+
+    <h3>5. Simple pricing</h3>
+    <p>Usage-based billing models can balloon unexpectedly. Flat-tier pricing (X jobs for Y dollars/month) is easier to budget, especially for indie developers and small teams.</p>
+
+    <h2>Getting Started with CronAPI</h2>
+
+    <p>CronAPI is a cron job API built for developers who want simple, reliable HTTP scheduling without server management. Here's how to schedule your first job:</p>
+
+    <h3>Step 1: Register and get your API key</h3>
+    <pre><code>curl -X POST https://cronapi.up.railway.app/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "you@example.com", "password": "yourpassword"}'</code></pre>
+
+    <p>The response includes an API key with the prefix <code>cron_live_...</code>.</p>
+
+    <h3>Step 2: Create a scheduled job</h3>
+    <pre><code>curl -X POST https://cronapi.up.railway.app/api/v1/jobs \
+  -H "Authorization: Bearer cron_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Hourly ping",
+    "endpointUrl": "https://myapp.com/api/cron/ping",
+    "cronExpression": "0 * * * *",
+    "httpMethod": "POST"
+  }'</code></pre>
+
+    <h3>Step 3: Verify your endpoint (optional but recommended)</h3>
+    <p>CronAPI signs every request with an HMAC-SHA256 signature in the <code>X-CronAPI-Signature</code> header. Check it on your endpoint:</p>
+    <pre><code>const crypto = require('crypto');
+
+function verifyCronAPIRequest(req, secret) {
+  const signature = req.headers['x-cronapi-signature'];
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(req.body)
+    .digest('hex');
+  return signature === `sha256=${expected}`;
+}</code></pre>
+
+    <p>That's it. Your job will fire on schedule, retry on failure, and every execution will appear in your dashboard and the API response for <code>GET /api/v1/jobs/:jobId/executions</code>.</p>
+
+    <h2>CronAPI vs. Alternatives</h2>
+
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>CronAPI</th><th>Traditional cron</th><th>AWS EventBridge</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Setup time</td><td>~1 min</td><td>~30 min</td><td>~30 min</td></tr>
+        <tr><td>Server required</td><td>No</td><td>Yes</td><td>No</td></tr>
+        <tr><td>Execution history</td><td>Yes</td><td>Manual</td><td>CloudWatch logs</td></tr>
+        <tr><td>Auto retries</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+        <tr><td>HMAC signing</td><td>Yes</td><td>No</td><td>No (IAM auth)</td></tr>
+        <tr><td>Free tier</td><td>10 jobs, hourly</td><td>Unlimited (DIY)</td><td>Rules free, invocations metered</td></tr>
+        <tr><td>Predictable pricing</td><td>Yes (flat tiers)</td><td>Server cost</td><td>No (usage-based)</td></tr>
+      </tbody>
+    </table>
+
+    <p>See our <a href="/docs/comparison.html">full comparison page</a> for a detailed breakdown including EasyCron, cron-job.org, and Google Cloud Scheduler.</p>
+
+    <div class="cta-box">
+      <h3>Schedule your first job in 60 seconds</h3>
+      <p>Free tier includes 10 jobs with hourly scheduling. No credit card required.</p>
+      <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+    </div>
+
+    <h2>Summary</h2>
+
+    <p>A cron job API replaces your cron server with an HTTP endpoint. You describe the schedule once, and the API handles execution, retries, signing, and logging. The result: fewer servers to maintain, better visibility into what ran and when, and a scheduling layer that scales with your application instead of being bolted onto it.</p>
+
+    <p>For most web applications making scheduled HTTP calls, switching from cron to a cron job API takes an afternoon and doesn't require touching your application code — only where the trigger comes from.</p>
+  </article>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

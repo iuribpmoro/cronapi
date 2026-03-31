@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI Blog — Developer Guides for HTTP Scheduling</title>
+  <meta name="description" content="Tutorials, comparisons, and developer guides for cron job APIs, webhook schedulers, and scheduled HTTP requests." />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 900px; margin: 3rem auto; padding: 0 2rem; }
+    .page-title { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .page-sub { color: #8b949e; margin-bottom: 3rem; }
+    .posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .post-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem; transition: border-color 0.2s; }
+    .post-card:hover { border-color: #30363d; }
+    .post-card .tag { background: #0d1117; border: 1px solid #21262d; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.75rem; color: #8b949e; display: inline-block; margin-bottom: 0.75rem; }
+    .post-card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.4; }
+    .post-card h2 a { color: #e6edf3; }
+    .post-card h2 a:hover { color: #58a6ff; text-decoration: none; }
+    .post-card p { font-size: 0.875rem; color: #8b949e; margin-bottom: 1rem; }
+    .post-card .meta { font-size: 0.8rem; color: #6e7681; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <h1 class="page-title">CronAPI Blog</h1>
+  <p class="page-sub">Developer guides, tutorials, and comparisons for scheduled HTTP jobs.</p>
+
+  <div class="posts">
+    <div class="post-card">
+      <span class="tag">Guide</span>
+      <h2><a href="/blog/cron-job-api-guide.html">What Is a Cron Job API? A Complete Guide for Developers</a></h2>
+      <p>Learn when a cron job API beats a traditional crontab, how the request lifecycle works, and how to pick the right tool for your stack.</p>
+      <div class="meta">March 31, 2026 &middot; 8 min read</div>
+    </div>
+
+    <div class="post-card">
+      <span class="tag">Tutorial</span>
+      <h2><a href="/blog/webhook-scheduler-guide.html">Building a Reliable Webhook Scheduler: The Developer's Handbook</a></h2>
+      <p>Everything you need to know about designing, securing, and debugging webhook schedulers — with retry logic, HMAC signatures, and production patterns.</p>
+      <div class="meta">March 31, 2026 &middot; 10 min read</div>
+    </div>
+
+    <div class="post-card">
+      <span class="tag">Tutorial</span>
+      <h2><a href="/blog/scheduled-http-requests.html">How to Make Scheduled HTTP Requests Without Managing Infrastructure</a></h2>
+      <p>Stop maintaining cron servers. Here's how to schedule recurring HTTP calls with a single API call and zero DevOps overhead.</p>
+      <div class="meta">March 31, 2026 &middot; 7 min read</div>
+    </div>
+
+    <div class="post-card">
+      <span class="tag">Tutorial</span>
+      <h2><a href="/blog/schedule-recurring-api-calls.html">5 Ways to Schedule Recurring API Calls in 2026</a></h2>
+      <p>From crontab to cloud schedulers to dedicated APIs — a practical comparison of every method for running jobs on a schedule.</p>
+      <div class="meta">March 31, 2026 &middot; 9 min read</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>

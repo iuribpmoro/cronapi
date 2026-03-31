@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Make Scheduled HTTP Requests Without Managing Infrastructure — CronAPI</title>
+  <meta name="description" content="Stop maintaining cron servers. Schedule recurring HTTP requests with a single API call — no infrastructure, no DevOps, full execution history." />
+  <link rel="canonical" href="https://cronapi.up.railway.app/blog/scheduled-http-requests.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Make Scheduled HTTP Requests Without Managing Infrastructure",
+    "description": "Stop maintaining cron servers. Schedule recurring HTTP requests with a single API call — no infrastructure, no DevOps, full execution history.",
+    "author": { "@type": "Organization", "name": "CronAPI" },
+    "publisher": { "@type": "Organization", "name": "CronAPI", "url": "https://cronapi.up.railway.app" },
+    "datePublished": "2026-03-31",
+    "dateModified": "2026-03-31",
+    "mainEntityOfPage": "https://cronapi.up.railway.app/blog/scheduled-http-requests.html"
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .page { max-width: 760px; margin: 3rem auto; padding: 0 2rem; }
+    .breadcrumb { font-size: 0.875rem; color: #8b949e; margin-bottom: 2rem; }
+    .breadcrumb a { color: #8b949e; }
+    .breadcrumb a:hover { color: #e6edf3; }
+    article h1 { font-size: 2.25rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    article h2 { font-size: 1.5rem; font-weight: 700; margin: 2.5rem 0 0.75rem; color: #e6edf3; }
+    article h3 { font-size: 1.15rem; font-weight: 700; margin: 1.75rem 0 0.5rem; color: #c9d1d9; }
+    article p { color: #c9d1d9; margin-bottom: 1.25rem; }
+    article ul, article ol { margin: 0 0 1.25rem 1.5rem; color: #c9d1d9; }
+    article li { margin-bottom: 0.5rem; }
+    article strong { color: #e6edf3; }
+    article code { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.1em 0.4em; font-size: 0.85em; font-family: 'Courier New', monospace; color: #79c0ff; }
+    article pre { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 0.875rem; line-height: 1.8; }
+    article pre code { background: none; border: none; padding: 0; color: #e6edf3; }
+    .post-meta { color: #8b949e; font-size: 0.875rem; margin-bottom: 2rem; display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: center; }
+    .tag { background: #161b22; border: 1px solid #21262d; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.8rem; color: #8b949e; }
+    .cta-box { background: #161b22; border: 1px solid #238636; border-radius: 8px; padding: 2rem; text-align: center; margin: 3rem 0; }
+    .cta-box h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    .cta-box p { color: #8b949e; margin-bottom: 1.25rem; }
+    .btn { display: inline-block; padding: 0.75rem 1.75rem; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    .callout { background: #161b22; border-left: 3px solid #58a6ff; border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+    .callout p { margin: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.875rem; }
+    th, td { padding: 0.65rem 1rem; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #8b949e; font-weight: 600; background: #161b22; }
+    td { color: #c9d1d9; }
+    tr:hover td { background: #161b22; }
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; color: #6e7681; font-size: 0.875rem; margin-top: 4rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/" class="logo">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/changelog.html">Changelog</a>
+    <a href="/docs/comparison.html">Compare</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<div class="page">
+  <div class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Scheduled HTTP Requests</div>
+
+  <article>
+    <h1>How to Make Scheduled HTTP Requests Without Managing Infrastructure</h1>
+    <div class="post-meta">
+      <span>March 31, 2026</span>
+      <span>7 min read</span>
+      <span class="tag">scheduled HTTP requests</span>
+      <span class="tag">cron</span>
+      <span class="tag">devops</span>
+    </div>
+
+    <p>If you've ever maintained a crontab on a production server, you know the pain. The job silently fails at 3 AM, there's no alert, and you find out when a customer emails you the next day. Or you SSH into the box, tweak the schedule, and realize two weeks later you edited the wrong server's crontab.</p>
+
+    <p>Running your own cron infrastructure is a solved problem — just not a fun one. This post shows you a simpler path: <strong>scheduled HTTP requests</strong> via a dedicated API, with no servers to manage, full execution history, and automatic retries.</p>
+
+    <h2>The Problem With Traditional Cron</h2>
+
+    <p>Linux's <code>crontab</code> was designed in the 1970s for local shell commands. For modern API-first applications, it creates real friction:</p>
+
+    <ul>
+      <li><strong>Cron is tied to a server.</strong> When that server goes down, your jobs stop. When you scale horizontally, you have to pick exactly one node to run cron — or deal with duplicate execution.</li>
+      <li><strong>No built-in monitoring.</strong> Did the job run? Did it succeed? You have to build this yourself — typically by parsing syslog or wrapping every command in a custom logging script.</li>
+      <li><strong>No retries.</strong> If your endpoint is temporarily down at 2 AM, that execution is gone. Cron doesn't retry.</li>
+      <li><strong>Debugging is painful.</strong> When a cron job fails, you get an email (if you configured <code>MAILTO</code>) or nothing. There's no request history, no HTTP status code, no response body.</li>
+    </ul>
+
+    <h2>A Better Approach: Scheduled HTTP Requests via API</h2>
+
+    <p>Instead of running a cron server, you register a scheduled HTTP request with a dedicated scheduling API. You tell it:</p>
+    <ol>
+      <li>Which URL to call</li>
+      <li>On what schedule (cron expression)</li>
+      <li>What HTTP method and headers to use</li>
+    </ol>
+
+    <p>The API handles the rest: firing the request, capturing the response, retrying failures, and logging every execution. Your application only needs to expose an HTTP endpoint — which you probably already have.</p>
+
+    <h2>Setting Up Your First Scheduled HTTP Request</h2>
+
+    <p>Here's how to schedule an HTTP request with CronAPI. You'll need an account (free tier supports 10 jobs with hourly scheduling).</p>
+
+    <h3>1. Register and get your API key</h3>
+    <pre><code>curl -X POST https://cronapi.up.railway.app/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "you@example.com",
+    "password": "yourpassword"
+  }'</code></pre>
+
+    <p>Response:</p>
+    <pre><code>{
+  "apiKey": "cron_live_aBcDeFgHiJ...",
+  "userId": "usr_12345"
+}</code></pre>
+
+    <h3>2. Schedule your first HTTP request</h3>
+
+    <p>Schedule a POST to your application endpoint every hour:</p>
+    <pre><code>curl -X POST https://cronapi.up.railway.app/api/v1/jobs \
+  -H "Authorization: Bearer cron_live_aBcDeFgHiJ..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Hourly data sync",
+    "endpointUrl": "https://myapp.example.com/api/cron/sync",
+    "cronExpression": "0 * * * *",
+    "httpMethod": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"source\": \"scheduler\"}"
+  }'</code></pre>
+
+    <p>That's it. CronAPI will fire a POST request to your endpoint every hour, capture the HTTP response, and make it available in your execution history.</p>
+
+    <h3>3. Check execution history</h3>
+    <pre><code>curl https://cronapi.up.railway.app/api/v1/jobs/job_abc123/executions \
+  -H "Authorization: Bearer cron_live_aBcDeFgHiJ..."</code></pre>
+
+    <p>You'll see every execution with its status, HTTP response code, response body, and duration in milliseconds.</p>
+
+    <h2>Common Use Cases</h2>
+
+    <table>
+      <thead>
+        <tr><th>Job type</th><th>Cron expression</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Nightly report generation</td><td><code>0 2 * * *</code></td><td>Runs at 2 AM UTC daily</td></tr>
+        <tr><td>Hourly data sync</td><td><code>0 * * * *</code></td><td>Runs at the top of every hour</td></tr>
+        <tr><td>Weekly digest email</td><td><code>0 9 * * 1</code></td><td>Runs Monday at 9 AM UTC</td></tr>
+        <tr><td>Cache refresh every 15 min</td><td><code>*/15 * * * *</code></td><td>Requires Indie/Pro plan</td></tr>
+        <tr><td>Monthly billing run</td><td><code>0 0 1 * *</code></td><td>First day of month at midnight</td></tr>
+        <tr><td>Dead-letter queue drain</td><td><code>*/5 * * * *</code></td><td>Every 5 minutes</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Handling Failures Gracefully</h2>
+
+    <p>Scheduled HTTP requests fail for many reasons: network timeouts, service restarts, deployment windows. CronAPI retries failed requests automatically with exponential backoff — 3 attempts before marking an execution as failed.</p>
+
+    <p>To make your endpoint resilient to retries, implement idempotency using the execution ID that CronAPI passes in the <code>X-CronAPI-Execution-Id</code> request header:</p>
+
+    <pre><code>// Express.js example
+app.post('/api/cron/sync', async (req, res) => {
+  const executionId = req.headers['x-cronapi-execution-id'];
+
+  // Check if we've already processed this execution
+  const alreadyProcessed = await redis.get(`exec:${executionId}`);
+  if (alreadyProcessed) {
+    return res.json({ status: 'already_done' });
+  }
+
+  // Do the work
+  await runSync();
+
+  // Mark as processed (expire after 24h to avoid unbounded growth)
+  await redis.setex(`exec:${executionId}`, 86400, '1');
+
+  res.json({ status: 'done' });
+});</code></pre>
+
+    <h2>Securing Your Scheduled Endpoints</h2>
+
+    <p>Your webhook endpoint is reachable from the internet. Without authentication, anyone can trigger your scheduled jobs by hitting the URL directly.</p>
+
+    <p>CronAPI signs every request with HMAC-SHA256. Verify the signature before processing:</p>
+
+    <pre><code>const crypto = require('crypto');
+
+const CRONAPI_SECRET = process.env.CRONAPI_WEBHOOK_SECRET;
+
+app.post('/api/cron/sync', (req, res, next) => {
+  const sig = req.headers['x-cronapi-signature'];
+  const expected = 'sha256=' + crypto
+    .createHmac('sha256', CRONAPI_SECRET)
+    .update(req.rawBody) // needs raw body middleware
+    .digest('hex');
+
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    return res.status(401).json({ error: 'signature mismatch' });
+  }
+
+  next();
+});</code></pre>
+
+    <div class="callout">
+      <p><strong>Tip:</strong> Store your webhook secret in an environment variable, not in code. Rotate it if it's ever exposed.</p>
+    </div>
+
+    <h2>Migrating From a Cron Server</h2>
+
+    <p>If you're currently running cron jobs on a server, migration is straightforward:</p>
+
+    <ol>
+      <li><strong>Identify HTTP-callable jobs.</strong> Any cron job that calls a URL (curl, wget, HTTP client) can be moved directly.</li>
+      <li><strong>Wrap shell-only jobs.</strong> For jobs running local scripts, expose a thin HTTP endpoint that runs the same logic.</li>
+      <li><strong>Register jobs with CronAPI.</strong> One API call per job. Match the cron expression from your crontab.</li>
+      <li><strong>Run in parallel for one cycle.</strong> Keep the crontab running and watch both execution logs to confirm matching behavior.</li>
+      <li><strong>Remove the crontab entries.</strong> Once you're confident, delete the old crontab lines and decommission the scheduling server.</li>
+    </ol>
+
+    <p>Most teams complete this migration in an afternoon. The main work is exposing HTTP endpoints for any jobs that were pure shell commands.</p>
+
+    <div class="cta-box">
+      <h3>Schedule your first HTTP request in 60 seconds</h3>
+      <p>10 free jobs with hourly scheduling. No credit card. No DevOps.</p>
+      <a href="/#waitlist" class="btn btn-primary">Get early access</a>
+    </div>
+
+    <h2>Summary</h2>
+
+    <p>Scheduled HTTP requests via a dedicated API give you everything a cron server provides — and more: automatic retries, execution history, HMAC signing, and a dashboard. The tradeoff is minimal: you register jobs with an API instead of editing a crontab. Your application doesn't change — it just starts receiving scheduled HTTP requests instead of being triggered by a local shell command.</p>
+
+    <p>For most web applications, this is a clear improvement. Fewer servers, better visibility, and no 3 AM debugging sessions.</p>
+
+    <p>Read next: <a href="/blog/webhook-scheduler-guide.html">Building a Reliable Webhook Scheduler: The Developer's Handbook</a></p>
+  </article>
+</div>
+
+<footer>
+  <p>&copy; 2026 CronAPI. <a href="/">Home</a> &middot; <a href="/blog/">Blog</a> &middot; <a href="/api/docs">API Docs</a> &middot; <a href="/changelog.html">Changelog</a></p>
+</footer>
+
+</body>
+</html>
