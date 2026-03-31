@@ -45,6 +45,7 @@ async function migrate(): Promise<void> {
         http_method TEXT NOT NULL DEFAULT 'GET' CHECK (http_method IN ('GET','POST','PUT','PATCH','DELETE')),
         headers JSONB NOT NULL DEFAULT '{}',
         body TEXT,
+        notify_url TEXT,
         enabled BOOLEAN NOT NULL DEFAULT true,
         next_run_at TIMESTAMPTZ,
         last_run_at TIMESTAMPTZ,
@@ -72,6 +73,10 @@ async function migrate(): Promise<void> {
         finished_at TIMESTAMPTZ
       )
     `);
+
+    // Idempotent schema additions for existing installations
+    await client.query(`ALTER TABLE job_executions ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS notify_url TEXT`);
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_job_executions_job_id ON job_executions(job_id);
