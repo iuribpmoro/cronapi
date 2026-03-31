@@ -2,6 +2,8 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { validateApiKey } from '../lib/apiKeys';
 import { db } from '../db/client';
 import { runJob } from '../lib/executeJob';
+import { getPlanLimits } from '../lib/limits';
+import Stripe from 'stripe';
 import cronParser from 'cron-parser';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -14,12 +16,12 @@ async function getSessionUser(request: FastifyRequest) {
   if (!raw) return null;
   const validated = await validateApiKey(raw).catch(() => null);
   if (!validated) return null;
-  const row = await db.query<{ email: string; plan: string }>(
-    'SELECT email, plan FROM users WHERE id = $1',
+  const row = await db.query<{ email: string; plan: string; onboarding_completed: boolean }>(
+    'SELECT email, plan, onboarding_completed FROM users WHERE id = $1',
     [validated.userId]
   ).then(r => r.rows[0]).catch(() => null);
   if (!row) return null;
-  return { userId: validated.userId, keyId: validated.keyId, email: row.email, plan: row.plan };
+  return { userId: validated.userId, keyId: validated.keyId, email: row.email, plan: row.plan, onboardingCompleted: row.onboarding_completed };
 }
 
 function requireAuth(handler: (request: FastifyRequest, reply: FastifyReply, user: NonNullable<Awaited<ReturnType<typeof getSessionUser>>>) => Promise<void>) {
@@ -128,6 +130,7 @@ function layout(title: string, body: string, user?: { email: string; plan: strin
       <a href="/api/docs" target="_blank" rel="noopener">API Docs</a>
       ${user ? `<span>${user.email}</span>
       <span class="badge badge-active" style="text-transform:capitalize;">${user.plan}</span>
+      <a href="/dashboard/billing">Billing</a>
       <a href="/dashboard/logout">Logout</a>` : ''}
     </div>
   </nav>
@@ -163,7 +166,7 @@ function loginPage(error?: string) {
   `);
 }
 
-function jobsListPage(jobs: any[], user: { email: string; plan: string }, flash?: string) {
+function jobsListPage(jobs: any[], user: { email: string; plan: string }, flash?: string, usage?: { jobCount: number; jobLimit: number | null; execThisMonth: number }) {
   const rows = jobs.length === 0
     ? `<tr><td colspan="6" class="empty-state" style="padding:40px;text-align:center;color:#9ca3af;">
          No jobs yet. <a href="/dashboard/jobs/new">Create your first job →</a>
@@ -189,8 +192,40 @@ function jobsListPage(jobs: any[], user: { email: string; plan: string }, flash?
         </td>
       </tr>`).join('');
 
+  let upgradeBanner = '';
+  if (usage && usage.jobLimit) {
+    const pct = Math.round((usage.jobCount / usage.jobLimit) * 100);
+    if (pct >= 80) {
+      upgradeBanner = `
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <strong style="color:#92400e;">⚠ You're using ${pct}% of your job limit</strong>
+            <span style="color:#78350f;font-size:13px;margin-left:8px;">${usage.jobCount} / ${usage.jobLimit} jobs on the <strong>${user.plan}</strong> plan</span>
+          </div>
+          <a href="/dashboard/billing" class="btn btn-primary btn-sm">Upgrade plan →</a>
+        </div>`;
+    }
+  }
+
+  let usageBar = '';
+  if (usage && usage.jobLimit) {
+    const pct = Math.min(100, Math.round((usage.jobCount / usage.jobLimit) * 100));
+    usageBar = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:12px 16px;">
+        <div style="flex:1;">
+          <div style="font-size:12px;color:#6b7280;margin-bottom:4px;">Jobs: ${usage.jobCount} / ${usage.jobLimit} &nbsp;·&nbsp; Executions this month: ${usage.execThisMonth.toLocaleString()}</div>
+          <div style="background:#e5e7eb;border-radius:4px;height:6px;overflow:hidden;">
+            <div style="background:${pct >= 80 ? '#f59e0b' : '#4f6ef7'};width:${pct}%;height:100%;border-radius:4px;"></div>
+          </div>
+        </div>
+        <a href="/dashboard/billing" style="font-size:12px;color:#4f6ef7;white-space:nowrap;">View plan →</a>
+      </div>`;
+  }
+
   return layout('Jobs', `
     ${flash ? `<div class="success-msg">${flash}</div>` : ''}
+    ${upgradeBanner}
+    ${usageBar}
     <div class="page-actions">
       <h1>Jobs (${jobs.length})</h1>
       <a href="/dashboard/jobs/new" class="btn btn-primary">+ New Job</a>
@@ -358,6 +393,170 @@ function jobFormPage(user: { email: string; plan: string }, job?: any, error?: s
   `, user);
 }
 
+function onboardingPage(user: { email: string; plan: string }, step: number, jobId?: string, error?: string) {
+  const steps = [
+    { num: 1, label: 'Create your first job' },
+    { num: 2, label: 'Test it' },
+    { num: 3, label: 'Set a schedule' },
+  ];
+
+  const stepIndicator = `
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:32px;">
+      ${steps.map((s, i) => `
+        <div style="display:flex;align-items:center;${i > 0 ? 'flex:1;' : ''}">
+          ${i > 0 ? `<div style="flex:1;height:2px;background:${step > s.num - 1 ? '#4f6ef7' : '#e5e5e5'};"></div>` : ''}
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;
+              background:${step >= s.num ? '#4f6ef7' : '#e5e5e5'};color:${step >= s.num ? '#fff' : '#9ca3af'};">${step > s.num ? '✓' : s.num}</div>
+            <div style="font-size:11px;color:${step >= s.num ? '#4f6ef7' : '#9ca3af'};white-space:nowrap;font-weight:${step === s.num ? '600' : '400'};">${s.label}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+
+  let stepContent = '';
+  if (step === 1) {
+    stepContent = `
+      <h2 style="margin-bottom:8px;">Create your first job</h2>
+      <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">A job is a scheduled HTTP request. Let's create one with a pre-filled example to get started.</p>
+      ${error ? `<div class="error-msg">${error}</div>` : ''}
+      <form method="POST" action="/dashboard/onboarding/step1">
+        <div class="form-group">
+          <label for="name">Job Name *</label>
+          <input type="text" id="name" name="name" value="Health Check" required />
+        </div>
+        <div class="form-group">
+          <label for="endpointUrl">Endpoint URL *</label>
+          <input type="url" id="endpointUrl" name="endpointUrl" value="https://httpbin.org/get" required />
+          <div class="form-hint">We pre-filled a test endpoint — httpbin.org echoes requests back. You can change this to your own URL.</div>
+        </div>
+        <div class="form-group">
+          <label for="cronExpression">Cron Expression *</label>
+          <input type="text" id="cronExpression" name="cronExpression" value="0 * * * *" required />
+          <div class="form-hint">This runs every hour. You'll customise the schedule in step 3.</div>
+        </div>
+        <input type="hidden" name="httpMethod" value="GET" />
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create job &amp; continue →</button>
+      </form>`;
+  } else if (step === 2 && jobId) {
+    stepContent = `
+      <h2 style="margin-bottom:8px;">Test your job</h2>
+      <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Let's run your job right now to make sure it works. Hit the button below to trigger it manually.</p>
+      <form method="POST" action="/dashboard/onboarding/step2/${jobId}">
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:12px;">▶ Run job now</button>
+      </form>
+      <a href="/dashboard/onboarding/step3/${jobId}" style="display:block;text-align:center;font-size:13px;color:#9ca3af;">Skip this step →</a>`;
+  } else if (step === 3 && jobId) {
+    stepContent = `
+      <h2 style="margin-bottom:8px;">Set your schedule</h2>
+      <p style="color:#6b7280;font-size:13px;margin-bottom:20px;">Pick a cron schedule for your job. Common examples are pre-filled below.</p>
+      ${error ? `<div class="error-msg">${error}</div>` : ''}
+      <form method="POST" action="/dashboard/onboarding/step3/${jobId}">
+        <div class="form-group">
+          <label for="cronExpression">Cron Expression *</label>
+          <input type="text" id="cronExpression" name="cronExpression" value="0 * * * *" required />
+          <div class="form-hint">
+            Examples: <code>0 * * * *</code> (hourly) · <code>*/5 * * * *</code> (every 5 min) · <code>0 9 * * 1-5</code> (9am weekdays)
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+          ${[
+            ['Every hour', '0 * * * *'],
+            ['Every 5 min', '*/5 * * * *'],
+            ['Daily at midnight', '0 0 * * *'],
+            ['9am weekdays', '0 9 * * 1-5'],
+          ].map(([label, expr]) => `
+            <button type="button" class="btn btn-secondary btn-sm"
+              onclick="document.getElementById('cronExpression').value='${expr}'"
+              style="justify-content:center;">${label}<br/><code style="font-size:10px;">${expr}</code></button>
+          `).join('')}
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Save schedule &amp; finish →</button>
+      </form>`;
+  }
+
+  return layout('Welcome to CronAPI', `
+    <div style="max-width:520px;margin:40px auto;">
+      <h1 style="text-align:center;margin-bottom:4px;">Welcome to CronAPI 👋</h1>
+      <p style="text-align:center;color:#6b7280;font-size:13px;margin-bottom:28px;">Let's get your first job running in 3 quick steps.</p>
+      ${stepIndicator}
+      <div class="card">
+        ${stepContent}
+      </div>
+      <p style="text-align:center;font-size:12px;color:#9ca3af;margin-top:12px;">
+        <a href="/dashboard/jobs">Skip onboarding →</a>
+      </p>
+    </div>
+  `, user);
+}
+
+function billingPage(user: { email: string; plan: string }, usage: { jobCount: number; execThisMonth: number }, planLimits: { maxJobs: number | null; rateLimit: number }) {
+  const plans = [
+    { name: 'free', price: 0, maxJobs: 10, minInterval: '60 min', rateLimit: 10, description: 'For hobby projects' },
+    { name: 'indie', price: 9, maxJobs: 100, minInterval: '1 min', rateLimit: 60, description: 'For indie developers' },
+    { name: 'pro', price: 29, maxJobs: null, minInterval: '1 min', rateLimit: 300, description: 'For production workloads' },
+  ];
+
+  const jobLimit = planLimits.maxJobs;
+  const jobPct = jobLimit ? Math.min(100, Math.round((usage.jobCount / jobLimit) * 100)) : 0;
+
+  const progressBar = (pct: number, warn: boolean) => `
+    <div style="background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;margin-top:6px;">
+      <div style="background:${warn ? '#f59e0b' : '#4f6ef7'};width:${pct}%;height:100%;border-radius:4px;transition:width 0.3s;"></div>
+    </div>`;
+
+  const usageSection = `
+    <div class="card" style="margin-bottom:16px;">
+      <h2 style="margin-bottom:16px;">Current Usage</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div class="stat-label">Jobs Used</div>
+          <div style="font-size:20px;font-weight:700;">${usage.jobCount}${jobLimit ? ` / ${jobLimit}` : ''}</div>
+          ${jobLimit ? progressBar(jobPct, jobPct >= 80) : '<div style="font-size:12px;color:#16a34a;margin-top:4px;">Unlimited</div>'}
+          ${jobLimit && jobPct >= 80 ? `<div style="font-size:11px;color:#d97706;margin-top:4px;">⚠ ${jobPct}% of limit used</div>` : ''}
+        </div>
+        <div>
+          <div class="stat-label">Executions This Month</div>
+          <div style="font-size:20px;font-weight:700;">${usage.execThisMonth.toLocaleString()}</div>
+        </div>
+      </div>
+    </div>`;
+
+  const plansSection = `
+    <div class="card">
+      <h2 style="margin-bottom:16px;">Plans</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        ${plans.map(p => {
+          const isCurrent = p.name === user.plan;
+          return `
+          <div style="border:2px solid ${isCurrent ? '#4f6ef7' : '#e5e5e5'};border-radius:8px;padding:16px;position:relative;">
+            ${isCurrent ? '<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#4f6ef7;color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;text-transform:uppercase;">Current</div>' : ''}
+            <div style="font-weight:700;font-size:15px;text-transform:capitalize;margin-bottom:4px;">${p.name}</div>
+            <div style="font-size:22px;font-weight:800;margin-bottom:8px;">$${p.price}<span style="font-size:12px;font-weight:400;color:#6b7280;">/mo</span></div>
+            <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">${p.description}</div>
+            <ul style="font-size:12px;color:#374151;list-style:none;margin-bottom:16px;display:flex;flex-direction:column;gap:4px;">
+              <li>✓ ${p.maxJobs ? p.maxJobs + ' jobs' : 'Unlimited jobs'}</li>
+              <li>✓ Min interval: ${p.minInterval}</li>
+              <li>✓ ${p.rateLimit} req/min</li>
+            </ul>
+            ${isCurrent
+              ? '<div style="text-align:center;font-size:12px;color:#9ca3af;">Active plan</div>'
+              : `<form method="POST" action="/dashboard/billing/checkout"><input type="hidden" name="plan" value="${p.name}" /><button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;">Upgrade →</button></form>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  return layout('Billing', `
+    <div class="page-actions">
+      <h1>Billing &amp; Plan</h1>
+    </div>
+    ${usageSection}
+    ${plansSection}
+  `, user);
+}
+
 function escapeHtml(str: string) {
   return str
     .replace(/&/g, '&amp;')
@@ -403,8 +602,30 @@ export async function dashboardRoutes(app: FastifyInstance) {
       'SELECT * FROM jobs WHERE user_id = $1 ORDER BY created_at DESC',
       [user.userId]
     );
+    const jobs = result.rows;
+
+    // Show onboarding for first-time users with no jobs
+    if (!user.onboardingCompleted && jobs.length === 0) {
+      return reply.redirect('/dashboard/onboarding');
+    }
+
     const flash = (request.query as any).flash;
-    reply.type('text/html').send(jobsListPage(result.rows, user, flash));
+
+    // Fetch usage for banner
+    const limits = getPlanLimits(user.plan as any);
+    const execResult = await db.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM job_executions je
+       JOIN jobs j ON j.id = je.job_id
+       WHERE j.user_id = $1 AND DATE_TRUNC('month', je.started_at) = DATE_TRUNC('month', NOW())`,
+      [user.userId]
+    );
+    const usage = {
+      jobCount: jobs.length,
+      jobLimit: limits.maxJobs === Infinity ? null : limits.maxJobs,
+      execThisMonth: parseInt(execResult.rows[0]?.count ?? '0'),
+    };
+
+    reply.type('text/html').send(jobsListPage(jobs, user, flash, usage));
   }));
 
   // GET /dashboard/jobs/new
@@ -587,5 +808,137 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const { jobId } = request.params as { jobId: string };
     await db.query('DELETE FROM jobs WHERE id = $1 AND user_id = $2', [jobId, user.userId]);
     reply.redirect('/dashboard/jobs?flash=Job+deleted');
+  }));
+
+  // ── onboarding ──────────────────────────────────────────────────────────────
+
+  // GET /dashboard/onboarding — step 1
+  app.get('/onboarding', requireAuth(async (_req, reply, user) => {
+    reply.type('text/html').send(onboardingPage(user, 1));
+  }));
+
+  // POST /dashboard/onboarding/step1 — create job and proceed to step 2
+  app.post<{ Body: Record<string, string> }>('/onboarding/step1', requireAuth(async (request, reply, user) => {
+    const b = request.body as Record<string, string>;
+    const { name, endpointUrl, cronExpression, httpMethod = 'GET' } = b;
+    if (!name || !endpointUrl || !cronExpression) {
+      return reply.type('text/html').send(onboardingPage(user, 1, undefined, 'Name, Endpoint URL, and Cron Expression are required.'));
+    }
+    try { cronParser.parseExpression(cronExpression); } catch {
+      return reply.type('text/html').send(onboardingPage(user, 1, undefined, 'Invalid cron expression.'));
+    }
+    const insertResult = await db.query<{ id: string }>(
+      `INSERT INTO jobs (user_id, name, endpoint_url, cron_expression, http_method, headers, next_run_at)
+       VALUES ($1, $2, $3, $4, $5, '{}', $6) RETURNING id`,
+      [user.userId, name, endpointUrl, cronExpression, httpMethod.toUpperCase(), nextRunAt(cronExpression)]
+    );
+    const jobId = insertResult.rows[0].id;
+    reply.redirect(`/dashboard/onboarding/step2/${jobId}`);
+  }));
+
+  // GET /dashboard/onboarding/step2/:jobId
+  app.get<{ Params: { jobId: string } }>('/onboarding/step2/:jobId', requireAuth(async (request, reply, user) => {
+    const { jobId } = request.params as { jobId: string };
+    reply.type('text/html').send(onboardingPage(user, 2, jobId));
+  }));
+
+  // POST /dashboard/onboarding/step2/:jobId — trigger job then go to step 3
+  app.post<{ Params: { jobId: string } }>('/onboarding/step2/:jobId', requireAuth(async (request, reply, user) => {
+    const { jobId } = request.params as { jobId: string };
+    const jobResult = await db.query(
+      'SELECT id, endpoint_url, http_method, headers, body, notify_url, max_retries, signing_secret, timeout_ms FROM jobs WHERE id = $1 AND user_id = $2',
+      [jobId, user.userId]
+    );
+    if (jobResult.rows[0]) {
+      await runJob(jobResult.rows[0]).catch(() => {});
+    }
+    reply.redirect(`/dashboard/onboarding/step3/${jobId}`);
+  }));
+
+  // GET /dashboard/onboarding/step3/:jobId
+  app.get<{ Params: { jobId: string } }>('/onboarding/step3/:jobId', requireAuth(async (request, reply, user) => {
+    const { jobId } = request.params as { jobId: string };
+    reply.type('text/html').send(onboardingPage(user, 3, jobId));
+  }));
+
+  // POST /dashboard/onboarding/step3/:jobId — save schedule and complete onboarding
+  app.post<{ Params: { jobId: string }; Body: Record<string, string> }>('/onboarding/step3/:jobId', requireAuth(async (request, reply, user) => {
+    const { jobId } = request.params as { jobId: string };
+    const { cronExpression } = request.body as Record<string, string>;
+    if (cronExpression) {
+      try { cronParser.parseExpression(cronExpression); } catch {
+        return reply.type('text/html').send(onboardingPage(user, 3, jobId, 'Invalid cron expression.'));
+      }
+      await db.query(
+        'UPDATE jobs SET cron_expression=$1, next_run_at=$2, updated_at=NOW() WHERE id=$3 AND user_id=$4',
+        [cronExpression, nextRunAt(cronExpression), jobId, user.userId]
+      );
+    }
+    await db.query('UPDATE users SET onboarding_completed=true, updated_at=NOW() WHERE id=$1', [user.userId]);
+    reply.redirect('/dashboard/jobs?flash=Welcome+to+CronAPI!+Your+first+job+is+ready.');
+  }));
+
+  // ── billing ─────────────────────────────────────────────────────────────────
+
+  // GET /dashboard/billing
+  app.get('/billing', requireAuth(async (_req, reply, user) => {
+    const limits = getPlanLimits(user.plan as any);
+    const [jobResult, execResult] = await Promise.all([
+      db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs WHERE user_id=$1', [user.userId]),
+      db.query<{ count: string }>(
+        `SELECT COUNT(*) as count FROM job_executions je
+         JOIN jobs j ON j.id = je.job_id
+         WHERE j.user_id=$1 AND DATE_TRUNC('month', je.started_at)=DATE_TRUNC('month', NOW())`,
+        [user.userId]
+      ),
+    ]);
+    const usage = {
+      jobCount: parseInt(jobResult.rows[0]?.count ?? '0'),
+      execThisMonth: parseInt(execResult.rows[0]?.count ?? '0'),
+    };
+    const planLimits = {
+      maxJobs: limits.maxJobs === Infinity ? null : limits.maxJobs,
+      rateLimit: limits.rateLimit,
+    };
+    reply.type('text/html').send(billingPage(user, usage, planLimits));
+  }));
+
+  // POST /dashboard/billing/checkout — create Stripe checkout session
+  app.post<{ Body: { plan?: string } }>('/billing/checkout', requireAuth(async (request, reply, user) => {
+    const { plan } = request.body as { plan?: string };
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+
+    if (!stripeKey) {
+      return reply.type('text/html').send(layout('Upgrade', `
+        <div class="container" style="max-width:520px;margin:60px auto;">
+          <div class="card" style="text-align:center;">
+            <h2 style="margin-bottom:8px;">Stripe not configured</h2>
+            <p style="color:#6b7280;font-size:13px;margin-bottom:16px;">Stripe payments are not yet set up. Please contact support to upgrade your plan.</p>
+            <a href="/dashboard/billing" class="btn btn-secondary">← Back to Billing</a>
+          </div>
+        </div>
+      `, user));
+    }
+
+    const priceId = plan === 'pro' ? process.env.STRIPE_PRO_PRICE_ID : process.env.STRIPE_INDIE_PRICE_ID;
+    if (!priceId) {
+      return reply.redirect('/dashboard/billing?flash=Plan+price+not+configured');
+    }
+
+    const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' });
+    const protocol = request.headers['x-forwarded-proto'] ?? 'http';
+    const host = request.headers.host ?? 'localhost';
+    const baseUrl = `${protocol}://${host}`;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      customer_email: user.email,
+      success_url: `${baseUrl}/dashboard/jobs?flash=Plan+upgraded+successfully`,
+      cancel_url: `${baseUrl}/dashboard/billing`,
+    });
+
+    reply.redirect(session.url!);
   }));
 }
