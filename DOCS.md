@@ -151,6 +151,10 @@ All job endpoints return job objects in this shape:
   },
   "body": "{\"trigger\": \"scheduled\"}",
   "enabled": true,
+  "notifyUrl": null,
+  "maxRetries": 3,
+  "signingSecret": "a3f8c2...",
+  "timeoutMs": 30000,
   "nextRunAt": "2024-06-02T09:00:00.000Z",
   "lastRunAt": "2024-06-01T09:00:00.000Z",
   "createdAt": "2024-05-01T00:00:00.000Z",
@@ -201,6 +205,9 @@ Create a new scheduled job.
 | `httpMethod` | string | No | One of `GET`, `POST`, `PUT`, `PATCH`, `DELETE`. Defaults to `GET`. |
 | `headers` | object | No | Key-value pairs sent as request headers |
 | `body` | string | No | Raw request body string (e.g. JSON-stringified payload) |
+| `notifyUrl` | string | No | URL to POST a notification to on job failure |
+| `maxRetries` | number | No | Number of retries on failure. 0–5. Defaults to `3`. |
+| `timeoutMs` | number | No | Webhook request timeout in milliseconds. 1000–120000. Defaults to `30000` (30s). |
 
 **Cron expression examples**
 
@@ -427,6 +434,59 @@ Join the waitlist before registering.
   "message": "Added to waitlist!"
 }
 ```
+
+---
+
+## Webhook Signatures
+
+Every outgoing webhook request includes an `X-CronAPI-Signature` header so you can verify the request came from CronAPI and was not tampered with.
+
+### How it works
+
+CronAPI signs each request using **HMAC-SHA256** with your job's `signingSecret`. The signature is computed over the raw request body (empty string for bodyless requests).
+
+Header format:
+
+```
+X-CronAPI-Signature: sha256=<hex_digest>
+```
+
+### Verifying signatures
+
+**Node.js example**
+
+```js
+const crypto = require('crypto');
+
+function verifySignature(signingSecret, rawBody, signatureHeader) {
+  const expected = 'sha256=' + crypto
+    .createHmac('sha256', signingSecret)
+    .update(rawBody)
+    .digest('hex');
+  return crypto.timingSafeEqual(
+    Buffer.from(signatureHeader),
+    Buffer.from(expected)
+  );
+}
+```
+
+**Python example**
+
+```python
+import hmac, hashlib
+
+def verify_signature(signing_secret: str, raw_body: bytes, signature_header: str) -> bool:
+    expected = 'sha256=' + hmac.new(
+        signing_secret.encode(), raw_body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature_header, expected)
+```
+
+### Key points
+
+- The `signingSecret` is unique per job and returned in the job object. Treat it like a password — store it securely.
+- Always use a **timing-safe comparison** to prevent timing attacks.
+- If you rotate the secret (by deleting and recreating the job), update your verification code accordingly.
 
 ---
 

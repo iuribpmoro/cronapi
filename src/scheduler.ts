@@ -15,8 +15,10 @@ export function startScheduler() {
       cron_expression: string;
       notify_url: string | null;
       max_retries: number;
+      signing_secret: string;
+      timeout_ms: number;
     }>(
-      `SELECT id, endpoint_url, http_method, headers, body, cron_expression, notify_url, max_retries
+      `SELECT id, endpoint_url, http_method, headers, body, cron_expression, notify_url, max_retries, signing_secret, timeout_ms
        FROM jobs WHERE enabled = true AND next_run_at <= $1`,
       [now]
     );
@@ -36,6 +38,8 @@ async function executeScheduledJob(job: {
   cron_expression: string;
   notify_url: string | null;
   max_retries: number;
+  signing_secret: string;
+  timeout_ms: number;
 }) {
   const result = await runJob(job);
 

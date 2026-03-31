@@ -17,6 +17,8 @@ interface Job {
   enabled: boolean;
   notify_url: string | null;
   max_retries: number;
+  signing_secret: string;
+  timeout_ms: number;
   next_run_at: Date | null;
   last_run_at: Date | null;
   created_at: Date;
@@ -35,6 +37,8 @@ function toJobResponse(job: Job) {
     enabled: job.enabled,
     notifyUrl: job.notify_url,
     maxRetries: job.max_retries,
+    signingSecret: job.signing_secret,
+    timeoutMs: job.timeout_ms,
     nextRunAt: job.next_run_at,
     lastRunAt: job.last_run_at,
     createdAt: job.created_at,
@@ -77,9 +81,10 @@ export async function jobRoutes(app: FastifyInstance) {
       body?: string;
       notifyUrl?: string;
       maxRetries?: number;
+      timeoutMs?: number;
     };
   }>('/', { preHandler: authenticate }, async (request, reply) => {
-    const { name, endpointUrl, cronExpression, httpMethod = 'GET', headers = {}, body, notifyUrl, maxRetries = 3 } = request.body ?? {};
+    const { name, endpointUrl, cronExpression, httpMethod = 'GET', headers = {}, body, notifyUrl, maxRetries = 3, timeoutMs = 30_000 } = request.body ?? {};
 
     if (!name || !endpointUrl || !cronExpression) {
       return reply.code(400).send({ error: 'name, endpointUrl, and cronExpression are required' });
@@ -107,6 +112,10 @@ export async function jobRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'maxRetries must be between 0 and 5' });
     }
 
+    if (typeof timeoutMs !== 'number' || timeoutMs < 1000 || timeoutMs > 120_000) {
+      return reply.code(400).send({ error: 'timeoutMs must be between 1000 and 120000' });
+    }
+
     const { userId, plan } = request.user!;
     const limits = getPlanLimits(plan);
 
@@ -129,10 +138,10 @@ export async function jobRoutes(app: FastifyInstance) {
     }
 
     const result = await db.query<Job>(
-      `INSERT INTO jobs (user_id, name, endpoint_url, cron_expression, http_method, headers, body, notify_url, max_retries, next_run_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO jobs (user_id, name, endpoint_url, cron_expression, http_method, headers, body, notify_url, max_retries, timeout_ms, next_run_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [userId, name, endpointUrl, cronExpression, httpMethod.toUpperCase(), JSON.stringify(headers), body ?? null, notifyUrl ?? null, maxRetries, nextRunAt(cronExpression)]
+      [userId, name, endpointUrl, cronExpression, httpMethod.toUpperCase(), JSON.stringify(headers), body ?? null, notifyUrl ?? null, maxRetries, timeoutMs, nextRunAt(cronExpression)]
     );
 
     return reply.code(201).send({ job: toJobResponse(result.rows[0]) });
@@ -151,7 +160,7 @@ export async function jobRoutes(app: FastifyInstance) {
   // PATCH /api/v1/jobs/:jobId
   app.patch<{
     Params: { jobId: string };
-    Body: { name?: string; endpointUrl?: string; cronExpression?: string; httpMethod?: string; headers?: Record<string, string>; body?: string; enabled?: boolean; notifyUrl?: string | null; maxRetries?: number };
+    Body: { name?: string; endpointUrl?: string; cronExpression?: string; httpMethod?: string; headers?: Record<string, string>; body?: string; enabled?: boolean; notifyUrl?: string | null; maxRetries?: number; timeoutMs?: number };
   }>('/:jobId', { preHandler: authenticate }, async (request, reply) => {
     const existing = await db.query<Job>(
       'SELECT * FROM jobs WHERE id = $1 AND user_id = $2',
@@ -179,13 +188,17 @@ export async function jobRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: 'maxRetries must be between 0 and 5' });
     }
 
+    if (updates.timeoutMs !== undefined && (updates.timeoutMs < 1000 || updates.timeoutMs > 120_000)) {
+      return reply.code(400).send({ error: 'timeoutMs must be between 1000 and 120000' });
+    }
+
     const cronExpr = updates.cronExpression ?? job.cron_expression;
     const result = await db.query<Job>(
       `UPDATE jobs SET
         name = $1, endpoint_url = $2, cron_expression = $3, http_method = $4,
         headers = $5, body = $6, enabled = $7, notify_url = $8, max_retries = $9,
-        next_run_at = $10, updated_at = NOW()
-       WHERE id = $11 AND user_id = $12 RETURNING *`,
+        timeout_ms = $10, next_run_at = $11, updated_at = NOW()
+       WHERE id = $12 AND user_id = $13 RETURNING *`,
       [
         updates.name ?? job.name,
         updates.endpointUrl ?? job.endpoint_url,
@@ -196,6 +209,7 @@ export async function jobRoutes(app: FastifyInstance) {
         updates.enabled !== undefined ? updates.enabled : job.enabled,
         updates.notifyUrl !== undefined ? updates.notifyUrl : job.notify_url,
         updates.maxRetries !== undefined ? updates.maxRetries : job.max_retries,
+        updates.timeoutMs !== undefined ? updates.timeoutMs : job.timeout_ms,
         nextRunAt(cronExpr),
         request.params.jobId,
         request.user!.userId,
@@ -311,8 +325,9 @@ export async function jobRoutes(app: FastifyInstance) {
         id: string; endpoint_url: string; http_method: string;
         headers: Record<string, string>; body: string | null;
         notify_url: string | null; max_retries: number;
+        signing_secret: string; timeout_ms: number;
       }>(
-        'SELECT id, endpoint_url, http_method, headers, body, notify_url, max_retries FROM jobs WHERE id = $1 AND user_id = $2',
+        'SELECT id, endpoint_url, http_method, headers, body, notify_url, max_retries, signing_secret, timeout_ms FROM jobs WHERE id = $1 AND user_id = $2',
         [request.params.jobId, request.user!.userId]
       );
       if (!jobResult.rows[0]) return reply.code(404).send({ error: 'Job not found' });

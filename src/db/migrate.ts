@@ -82,6 +82,8 @@ async function migrate(): Promise<void> {
     await client.query(`ALTER TABLE job_executions ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0`);
     await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS notify_url TEXT`);
     await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS max_retries INT NOT NULL DEFAULT 3`);
+    await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS signing_secret TEXT NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex')`);
+    await client.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS timeout_ms INT NOT NULL DEFAULT 30000`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS waitlist (

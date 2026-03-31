@@ -1,6 +1,11 @@
+import { createHmac } from 'crypto';
 import { db } from '../db/client';
 
 const RETRY_DELAYS_MS = [1_000, 5_000, 30_000];
+
+function signPayload(signingSecret: string, body: string): string {
+  return 'sha256=' + createHmac('sha256', signingSecret).update(body).digest('hex');
+}
 
 export interface JobExecutionResult {
   id: string;
@@ -19,16 +24,20 @@ async function attemptRequest(
   endpointUrl: string,
   httpMethod: string,
   headers: Record<string, string>,
-  body: string | null
+  body: string | null,
+  timeoutMs: number,
+  signingSecret: string
 ): Promise<{ status: 'success' | 'failed' | 'timeout'; responseStatus: number | null; responseBody: string | null; errorMessage: string | null }> {
-  const timeout = 30_000;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const payload = body ?? '';
+  const signature = signPayload(signingSecret, payload);
 
   try {
     const res = await fetch(endpointUrl, {
       method: httpMethod,
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: { 'Content-Type': 'application/json', 'X-CronAPI-Signature': signature, ...headers },
       body: body ?? undefined,
       signal: controller.signal,
     });
@@ -38,7 +47,7 @@ async function attemptRequest(
   } catch (err: any) {
     clearTimeout(timer);
     if (err.name === 'AbortError') {
-      return { status: 'timeout', responseStatus: null, responseBody: null, errorMessage: 'Request timed out after 30s' };
+      return { status: 'timeout', responseStatus: null, responseBody: null, errorMessage: `Request timed out after ${timeoutMs}ms` };
     }
     return { status: 'failed', responseStatus: null, responseBody: null, errorMessage: err.message?.slice(0, 500) ?? 'Unknown error' };
   }
@@ -52,18 +61,21 @@ export async function runJob(job: {
   body: string | null;
   max_retries: number;
   notify_url: string | null;
+  signing_secret: string;
+  timeout_ms: number;
 }): Promise<JobExecutionResult> {
   const startedAt = new Date();
   const maxRetries = job.max_retries ?? 3;
+  const timeoutMs = Math.min(job.timeout_ms ?? 30_000, 120_000);
 
-  let lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body);
+  let lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body, timeoutMs, job.signing_secret);
   let retryCount = 0;
 
   while (lastResult.status !== 'success' && retryCount < maxRetries) {
     const delayMs = RETRY_DELAYS_MS[retryCount] ?? 30_000;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     retryCount++;
-    lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body);
+    lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body, timeoutMs, job.signing_secret);
   }
 
   const finishedAt = new Date();
