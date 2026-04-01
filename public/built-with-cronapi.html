@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Built with CronAPI — Developer Showcase</title>
+  <meta name="description" content="See what developers and teams are building with CronAPI — scheduled HTTP jobs without the server headache." />
+  <link rel="canonical" href="https://cronapi.hakinsight.com/built-with-cronapi.html" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    header .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .nav-cta:hover { background: #2ea043; }
+
+    .hero { text-align: center; padding: 4rem 2rem 3rem; max-width: 760px; margin: 0 auto; }
+    .hero h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 1rem; }
+    .hero h1 span { color: #58a6ff; }
+    .hero p { font-size: 1.1rem; color: #8b949e; margin-bottom: 2rem; }
+    .hero .cta { display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    .btn { display: inline-block; padding: 0.65rem 1.5rem; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    .btn-outline { background: transparent; color: #58a6ff; border: 1px solid #30363d; }
+    .btn-outline:hover { background: #161b22; text-decoration: none; }
+
+    /* ── Use cases grid ── */
+    .use-cases { padding: 3rem 2rem; max-width: 1000px; margin: 0 auto; }
+    .use-cases h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .use-cases .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 2rem; }
+    .case-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+    .case-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem; transition: border-color 0.2s; }
+    .case-card:hover { border-color: #30363d; }
+    .case-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .case-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .case-card p { font-size: 0.875rem; color: #8b949e; margin-bottom: 1rem; }
+    .case-tag { display: inline-block; background: #21262d; border-radius: 4px; padding: 0.2rem 0.5rem; font-size: 0.75rem; color: #8b949e; margin-right: 0.3rem; margin-bottom: 0.3rem; }
+
+    /* ── Showcase entries ── */
+    .showcase { padding: 2rem 2rem 4rem; max-width: 1000px; margin: 0 auto; }
+    .showcase h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .showcase .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 2rem; }
+    .showcase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+    .showcase-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; }
+    .showcase-card .sc-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+    .sc-avatar { width: 40px; height: 40px; border-radius: 8px; background: #21262d; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+    .sc-name { font-weight: 700; font-size: 0.95rem; }
+    .sc-author { font-size: 0.8rem; color: #8b949e; }
+    .showcase-card p { font-size: 0.875rem; color: #8b949e; flex: 1; margin-bottom: 1rem; }
+    .sc-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
+    .sc-stack { font-size: 0.75rem; color: #6e7681; }
+
+    /* ── Submit CTA ── */
+    .submit { background: #161b22; border-top: 1px solid #21262d; border-bottom: 1px solid #21262d; padding: 3rem 2rem; text-align: center; }
+    .submit-inner { max-width: 540px; margin: 0 auto; }
+    .submit h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .submit p { color: #8b949e; margin-bottom: 1.5rem; font-size: 0.95rem; }
+
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; }
+    footer p { font-size: 0.8rem; color: #6e7681; }
+    footer a { color: #6e7681; }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Built with <span>CronAPI</span></h1>
+  <p>What developers and teams are building with scheduled HTTP jobs — from uptime monitors to daily digests to data pipelines.</p>
+  <div class="cta">
+    <a href="#submit" class="btn btn-primary">Share your project</a>
+    <a href="/#waitlist" class="btn btn-outline">Get your API key</a>
+  </div>
+</div>
+
+<!-- Use case categories -->
+<div class="use-cases">
+  <h2>Common use cases</h2>
+  <p class="sub">What people are using CronAPI for.</p>
+  <div class="case-grid">
+
+    <div class="case-card">
+      <div class="case-icon">🔍</div>
+      <h3>Uptime monitoring</h3>
+      <p>Ping health check endpoints every minute. Log response codes and latency. Get alerted when things go wrong.</p>
+      <div>
+        <span class="case-tag">GET /health</span>
+        <span class="case-tag">every minute</span>
+        <span class="case-tag">Slack alerts</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-icon">📊</div>
+      <h3>Daily reports & digests</h3>
+      <p>Trigger report generation at 8am. Email users their activity summary. Export metrics to Google Sheets or Notion.</p>
+      <div>
+        <span class="case-tag">0 8 * * 1-5</span>
+        <span class="case-tag">email</span>
+        <span class="case-tag">exports</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-icon">🔔</div>
+      <h3>Team notifications</h3>
+      <p>Send scheduled Slack or Discord messages. Standup reminders, sprint summaries, oncall handoffs.</p>
+      <div>
+        <span class="case-tag">Slack webhook</span>
+        <span class="case-tag">Discord</span>
+        <span class="case-tag">Teams</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-icon">🗄️</div>
+      <h3>Data pipelines</h3>
+      <p>Trigger nightly ETL jobs, data aggregations, or cache prewarms. Fire your endpoint and let your app do the work.</p>
+      <div>
+        <span class="case-tag">nightly</span>
+        <span class="case-tag">ETL</span>
+        <span class="case-tag">cache</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-icon">🧹</div>
+      <h3>Scheduled cleanup</h3>
+      <p>Delete expired sessions, purge old logs, archive completed records. Run on any schedule without touching your server.</p>
+      <div>
+        <span class="case-tag">cleanup</span>
+        <span class="case-tag">archiving</span>
+        <span class="case-tag">weekly</span>
+      </div>
+    </div>
+
+    <div class="case-card">
+      <div class="case-icon">🌡️</div>
+      <h3>Serverless warmup</h3>
+      <p>Keep cold-start-prone functions warm by pinging them every few minutes. No cold starts for your users.</p>
+      <div>
+        <span class="case-tag">*/5 * * * *</span>
+        <span class="case-tag">Vercel</span>
+        <span class="case-tag">Lambda</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Showcase entries — replace with real submissions as they arrive -->
+<div class="showcase">
+  <h2>Developer showcase</h2>
+  <p class="sub">Projects using CronAPI in production. <a href="#submit">Add yours →</a></p>
+  <div class="showcase-grid">
+
+    <!-- Template entry — replace with real ones -->
+    <div class="showcase-card">
+      <div class="sc-header">
+        <div class="sc-avatar">📈</div>
+        <div>
+          <div class="sc-name">MRR Tracker</div>
+          <div class="sc-author">@yourhandle</div>
+        </div>
+      </div>
+      <p>Pulls Stripe revenue data every morning and sends a Slack message with yesterday's MRR, new subscribers, and churn. Replaced a $15/mo cron service.</p>
+      <div class="sc-footer">
+        <div class="sc-stack">Node.js · Stripe · Slack</div>
+      </div>
+    </div>
+
+    <div class="showcase-card">
+      <div class="sc-header">
+        <div class="sc-avatar">🔁</div>
+        <div>
+          <div class="sc-name">DB Backup Trigger</div>
+          <div class="sc-author">@yourhandle</div>
+        </div>
+      </div>
+      <p>Fires a POST to a Render service every night at 2am, which runs pg_dump and uploads the result to S3. Zero infrastructure, reliable execution history.</p>
+      <div class="sc-footer">
+        <div class="sc-stack">PostgreSQL · Render · S3</div>
+      </div>
+    </div>
+
+    <div class="showcase-card">
+      <div class="sc-header">
+        <div class="sc-avatar">🐦</div>
+        <div>
+          <div class="sc-name">Newsletter Scheduler</div>
+          <div class="sc-author">@yourhandle</div>
+        </div>
+      </div>
+      <p>Triggers a weekly email digest every Tuesday at 10am. Endpoint queries a headless CMS for new content and sends via Resend to 3,000 subscribers.</p>
+      <div class="sc-footer">
+        <div class="sc-stack">Next.js · Resend · Sanity</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Submit CTA -->
+<div class="submit" id="submit">
+  <div class="submit-inner">
+    <h2>Share what you've built</h2>
+    <p>Using CronAPI for something interesting? We'd love to feature it here. Send a quick description to
+      <a href="mailto:hello@cronapi.hakinsight.com">hello@cronapi.hakinsight.com</a> or
+      post in <strong>#show-and-tell</strong> in our community.</p>
+    <div style="display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+      <a href="mailto:hello@cronapi.hakinsight.com?subject=Built with CronAPI" class="btn btn-primary">Send your project</a>
+      <a href="/#waitlist" class="btn btn-outline">Get your API key</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><a href="/">CronAPI</a> · <a href="/#pricing">Pricing</a> · <a href="/api/docs">API Docs</a> · <a href="/blog/">Blog</a> · <a href="mailto:hello@cronapi.hakinsight.com">hello@cronapi.hakinsight.com</a></p>
+</footer>
+
+</body>
+</html>

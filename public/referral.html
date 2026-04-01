@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CronAPI Referral Program — Give 1 Month Free, Get 1 Month Free</title>
+  <meta name="description" content="Refer a developer to CronAPI and you both get one month free on the Indie plan. No limits on referrals." />
+  <link rel="canonical" href="https://cronapi.hakinsight.com/referral.html" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header { border-bottom: 1px solid #21262d; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #0d1117; z-index: 100; }
+    header .logo { font-size: 1.4rem; font-weight: 700; color: #58a6ff; }
+    header nav a { margin-left: 1.5rem; color: #8b949e; font-size: 0.9rem; }
+    header nav a:hover { color: #e6edf3; text-decoration: none; }
+    .nav-cta { background: #238636; color: #fff !important; padding: 0.4rem 1rem; border-radius: 6px; font-weight: 600; }
+    .nav-cta:hover { background: #2ea043; }
+
+    .btn { display: inline-block; padding: 0.7rem 1.5rem; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; text-decoration: none; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; text-decoration: none; }
+    .btn-outline { background: transparent; color: #58a6ff; border: 1px solid #30363d; }
+    .btn-outline:hover { background: #161b22; text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero { text-align: center; padding: 4.5rem 2rem 3.5rem; max-width: 680px; margin: 0 auto; }
+    .hero-badge { display: inline-block; background: #1a2c1a; border: 1px solid #2ea043; border-radius: 20px; padding: 0.3rem 1rem; font-size: 0.8rem; color: #3fb950; margin-bottom: 1.5rem; font-weight: 600; }
+    .hero h1 { font-size: 2.75rem; font-weight: 800; line-height: 1.2; margin-bottom: 1.25rem; }
+    .hero h1 span { color: #58a6ff; }
+    .hero .sub { font-size: 1.1rem; color: #8b949e; margin-bottom: 2rem; max-width: 520px; margin-left: auto; margin-right: auto; }
+
+    /* ── Reward cards ── */
+    .rewards { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; padding: 0 2rem 3rem; max-width: 760px; margin: 0 auto; }
+    .reward-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 2rem; text-align: center; flex: 1; min-width: 240px; max-width: 320px; }
+    .reward-card.highlight { border-color: #238636; }
+    .reward-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .reward-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .reward-card p { font-size: 0.875rem; color: #8b949e; }
+    .reward-amount { font-size: 1.75rem; font-weight: 800; color: #3fb950; margin: 0.5rem 0; }
+
+    /* ── How it works ── */
+    .how { padding: 3rem 2rem; max-width: 760px; margin: 0 auto; }
+    .how h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 2rem; text-align: center; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; }
+    .step { text-align: center; }
+    .step-num { width: 48px; height: 48px; border-radius: 50%; background: #238636; color: #fff; font-size: 1.25rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+    .step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .step p { font-size: 0.875rem; color: #8b949e; }
+
+    /* ── Referral form ── */
+    .form-section { background: #161b22; border-top: 1px solid #21262d; border-bottom: 1px solid #21262d; padding: 3rem 2rem; }
+    .form-inner { max-width: 480px; margin: 0 auto; text-align: center; }
+    .form-inner h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .form-inner .sub { color: #8b949e; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .form-row { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .form-row input { flex: 1; min-width: 220px; padding: 0.65rem 1rem; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: #e6edf3; font-size: 1rem; }
+    .form-row input:focus { outline: none; border-color: #58a6ff; }
+    #ref-msg { margin-top: 1rem; font-size: 0.9rem; color: #3fb950; }
+
+    /* ── FAQ ── */
+    .faq-section { padding: 3rem 2rem 4rem; max-width: 640px; margin: 0 auto; }
+    .faq-section h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
+    .faq-item { border-bottom: 1px solid #21262d; padding: 1rem 0; }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.4rem; }
+    .faq-a { font-size: 0.875rem; color: #8b949e; }
+
+    /* ── Terms note ── */
+    .terms-note { text-align: center; padding: 0 2rem 3rem; color: #6e7681; font-size: 0.8rem; max-width: 600px; margin: 0 auto; }
+
+    footer { border-top: 1px solid #21262d; padding: 2rem; text-align: center; }
+    footer p { font-size: 0.8rem; color: #6e7681; }
+    footer a { color: #6e7681; }
+
+    @media (max-width: 600px) {
+      .hero h1 { font-size: 2.1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">CronAPI</a>
+  <nav>
+    <a href="/#features">Features</a>
+    <a href="/#pricing">Pricing</a>
+    <a href="/blog/">Blog</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/#waitlist" class="nav-cta">Get access</a>
+  </nav>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">Referral Program</div>
+  <h1>Share CronAPI.<br/><span>Both of you get a free month.</span></h1>
+  <p class="sub">Refer a developer to CronAPI and you each get one month free on the Indie plan ($9 value). No limits on how many people you can refer.</p>
+  <div style="display: inline-flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+    <a href="#get-link" class="btn btn-primary">Get my referral link</a>
+    <a href="/#pricing" class="btn btn-outline">See Indie plan</a>
+  </div>
+</div>
+
+<!-- Reward cards -->
+<div class="rewards">
+  <div class="reward-card">
+    <div class="reward-icon">🎁</div>
+    <h3>You give</h3>
+    <div class="reward-amount">1 month free</div>
+    <p>Your referral gets one month of Indie ($9 value) when they sign up with your link.</p>
+  </div>
+  <div class="reward-card highlight">
+    <div class="reward-icon">💰</div>
+    <h3>You get</h3>
+    <div class="reward-amount">1 month free</div>
+    <p>For every referral who activates, you get one month of Indie added to your account. Stack as many as you like.</p>
+  </div>
+</div>
+
+<!-- How it works -->
+<div class="how">
+  <h2>How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Get your link</h3>
+      <p>Log in to your CronAPI dashboard and copy your unique referral link.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Share it</h3>
+      <p>Send it to a developer friend, post it in a community, or mention it in a blog post.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>They sign up</h3>
+      <p>When they register and activate using your link, their first month of Indie is free.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>You earn credit</h3>
+      <p>Your account is automatically credited one month of Indie ($9). Stacks with every referral.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Get link form -->
+<div class="form-section" id="get-link">
+  <div class="form-inner">
+    <h2>Get your referral link</h2>
+    <p class="sub">Enter your email to receive your unique referral link. Must be an existing CronAPI account.</p>
+    <div class="form-row">
+      <input type="email" id="ref-email" placeholder="you@example.com" />
+      <button class="btn btn-primary" onclick="requestReferralLink()">Send my link</button>
+    </div>
+    <div id="ref-msg"></div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="faq-section">
+  <h2>Questions</h2>
+
+  <div class="faq-item">
+    <div class="faq-q">Who can join the referral program?</div>
+    <div class="faq-a">Any CronAPI user with an existing account can get a referral link. Free and paid users are both eligible.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">What counts as a successful referral?</div>
+    <div class="faq-a">When someone signs up using your referral link and upgrades to the Indie or Pro plan (or activates their free trial month), that counts as a successful referral.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Is there a limit to how many people I can refer?</div>
+    <div class="faq-a">No. Every successful referral adds another free month to your account. Refer 12 friends and get a year free.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">What does the referred person get?</div>
+    <div class="faq-a">The first month of the Indie plan is free — that's $9 off, no credit card required for the trial month.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">When is the credit applied to my account?</div>
+    <div class="faq-a">Credits are applied automatically when your referral activates. You'll receive an email confirmation.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Can credits be combined with other promotions?</div>
+    <div class="faq-a">Yes. Referral credits stack with each other and can be used alongside any other CronAPI promotion.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Can I refer myself or create fake accounts?</div>
+    <div class="faq-a">No. Referrals must come from genuinely new users. We check for duplicate emails, payment methods, and IP addresses. Abuse will result in account suspension.</div>
+  </div>
+</div>
+
+<div class="terms-note">
+  Referral credits apply to the Indie plan ($9/mo). Credits are non-transferable and have no cash value.
+  CronAPI reserves the right to modify or terminate the referral program with 30 days notice.
+  Questions? <a href="mailto:hello@cronapi.hakinsight.com">hello@cronapi.hakinsight.com</a>
+</div>
+
+<footer>
+  <p><a href="/">CronAPI</a> · <a href="/#pricing">Pricing</a> · <a href="/api/docs">API Docs</a> · <a href="/blog/">Blog</a> · <a href="/built-with-cronapi.html">Built with CronAPI</a></p>
+</footer>
+
+<script>
+  async function requestReferralLink() {
+    const email = document.getElementById('ref-email').value.trim();
+    const msg = document.getElementById('ref-msg');
+
+    if (!email || !email.includes('@')) {
+      msg.style.color = '#f85149';
+      msg.textContent = 'Please enter a valid email address.';
+      return;
+    }
+
+    msg.style.color = '#8b949e';
+    msg.textContent = 'Sending...';
+
+    try {
+      const res = await fetch('/api/v1/referral/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      if (res.ok) {
+        msg.style.color = '#3fb950';
+        msg.textContent = 'Check your email — your referral link is on the way!';
+      } else if (res.status === 404) {
+        msg.style.color = '#f85149';
+        msg.textContent = 'No account found with that email. Sign up first at the link above.';
+      } else {
+        throw new Error('unexpected');
+      }
+    } catch {
+      msg.style.color = '#f85149';
+      msg.textContent = 'Something went wrong. Email us at hello@cronapi.hakinsight.com and we\'ll send your link manually.';
+    }
+  }
+
+  document.getElementById('ref-email').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') requestReferralLink();
+  });
+</script>
+
+</body>
+</html>
