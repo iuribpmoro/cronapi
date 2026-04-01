@@ -1,0 +1,33 @@
+{
+  "name": "cronapi-js",
+  "version": "0.1.0",
+  "description": "Official JavaScript/TypeScript SDK for CronAPI — HTTP cron job scheduling",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.esm.json",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["cron", "scheduler", "api", "cronapi"],
+  "license": "MIT",
+  "homepage": "https://cronapi.hakinsight.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cronapi/cronapi-js"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

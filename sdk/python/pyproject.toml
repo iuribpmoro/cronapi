@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cronapi-python"
+version = "0.1.0"
+description = "Official Python SDK for CronAPI — HTTP cron job scheduling"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+keywords = ["cron", "scheduler", "api", "cronapi"]
+dependencies = [
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+Homepage = "https://cronapi.hakinsight.com"
+Repository = "https://github.com/cronapi/cronapi-python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cronapi"]
