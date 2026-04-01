@@ -20,6 +20,19 @@ export interface JobExecutionResult {
   finishedAt: Date;
 }
 
+interface AttemptResult {
+  status: 'success' | 'failed' | 'timeout';
+  responseStatus: number | null;
+  responseBody: string | null;
+  errorMessage: string | null;
+}
+
+interface AttemptRecord extends AttemptResult {
+  attemptNumber: number;
+  durationMs: number;
+  attemptedAt: Date;
+}
+
 async function attemptRequest(
   endpointUrl: string,
   httpMethod: string,
@@ -27,7 +40,7 @@ async function attemptRequest(
   body: string | null,
   timeoutMs: number,
   signingSecret: string
-): Promise<{ status: 'success' | 'failed' | 'timeout'; responseStatus: number | null; responseBody: string | null; errorMessage: string | null }> {
+): Promise<AttemptResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -68,14 +81,20 @@ export async function runJob(job: {
   const maxRetries = job.max_retries ?? 3;
   const timeoutMs = Math.min(job.timeout_ms ?? 30_000, 120_000);
 
-  let lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body, timeoutMs, job.signing_secret);
-  let retryCount = 0;
+  const attempts: AttemptRecord[] = [];
 
+  let attemptStart = Date.now();
+  let lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body, timeoutMs, job.signing_secret);
+  attempts.push({ attemptNumber: 1, ...lastResult, durationMs: Date.now() - attemptStart, attemptedAt: new Date(attemptStart) });
+
+  let retryCount = 0;
   while (lastResult.status !== 'success' && retryCount < maxRetries) {
     const delayMs = RETRY_DELAYS_MS[retryCount] ?? 30_000;
     await new Promise((resolve) => setTimeout(resolve, delayMs));
     retryCount++;
+    attemptStart = Date.now();
     lastResult = await attemptRequest(job.endpoint_url, job.http_method, job.headers, job.body, timeoutMs, job.signing_secret);
+    attempts.push({ attemptNumber: retryCount + 1, ...lastResult, durationMs: Date.now() - attemptStart, attemptedAt: new Date(attemptStart) });
   }
 
   const finishedAt = new Date();
@@ -86,13 +105,32 @@ export async function runJob(job: {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
     [job.id, lastResult.status, lastResult.responseStatus, lastResult.responseBody, durationMs, lastResult.errorMessage, retryCount, startedAt, finishedAt]
   );
+  const executionId = execResult.rows[0].id;
+
+  // Log each individual delivery attempt
+  for (const attempt of attempts) {
+    db.query(
+      `INSERT INTO delivery_attempts (execution_id, job_id, attempt_number, status, response_status, response_body, duration_ms, error_message, attempted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [executionId, job.id, attempt.attemptNumber, attempt.status, attempt.responseStatus, attempt.responseBody, attempt.durationMs, attempt.errorMessage, attempt.attemptedAt]
+    ).catch(() => {}); // best-effort
+  }
+
+  // If all retries exhausted and still failed, push to dead letter queue (7-day retention)
+  if (lastResult.status !== 'success') {
+    db.query(
+      `INSERT INTO dead_letter_queue (job_id, execution_id, endpoint_url, http_method, headers, body, error_message, attempt_count, failed_at, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW() + INTERVAL '7 days')`,
+      [job.id, executionId, job.endpoint_url, job.http_method, JSON.stringify(job.headers), job.body, lastResult.errorMessage ?? `HTTP ${lastResult.responseStatus}`, attempts.length]
+    ).catch(() => {}); // best-effort
+  }
 
   if (lastResult.status !== 'success' && job.notify_url) {
     sendFailureNotification(job.notify_url, job.id, lastResult.errorMessage ?? `HTTP ${lastResult.responseStatus}`).catch(() => {});
   }
 
   return {
-    id: execResult.rows[0].id,
+    id: executionId,
     jobId: job.id,
     status: lastResult.status,
     responseStatus: lastResult.responseStatus,

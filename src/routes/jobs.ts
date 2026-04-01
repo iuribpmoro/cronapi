@@ -383,6 +383,98 @@ export async function jobRoutes(app: FastifyInstance) {
     }
   );
 
+  // GET /api/v1/jobs/:jobId/executions/:executionId/attempts
+  app.get<{ Params: { jobId: string; executionId: string } }>(
+    '/:jobId/executions/:executionId/attempts',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      const job = await db.query('SELECT id FROM jobs WHERE id = $1 AND user_id = $2', [
+        request.params.jobId,
+        request.user!.userId,
+      ]);
+      if (!job.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+
+      const exec = await db.query('SELECT id FROM job_executions WHERE id = $1 AND job_id = $2', [
+        request.params.executionId,
+        request.params.jobId,
+      ]);
+      if (!exec.rows[0]) return reply.code(404).send({ error: 'Execution not found' });
+
+      const result = await db.query(
+        'SELECT * FROM delivery_attempts WHERE execution_id = $1 ORDER BY attempt_number ASC',
+        [request.params.executionId]
+      );
+      return reply.send({ attempts: result.rows });
+    }
+  );
+
+  // GET /api/v1/jobs/:jobId/dead-letters
+  app.get<{ Params: { jobId: string }; Querystring: { includeReplayed?: string } }>(
+    '/:jobId/dead-letters',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      const job = await db.query('SELECT id FROM jobs WHERE id = $1 AND user_id = $2', [
+        request.params.jobId,
+        request.user!.userId,
+      ]);
+      if (!job.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+
+      const includeReplayed = request.query.includeReplayed === 'true';
+      const result = await db.query(
+        `SELECT * FROM dead_letter_queue
+         WHERE job_id = $1 AND expires_at > NOW()
+         ${includeReplayed ? '' : 'AND replayed_at IS NULL'}
+         ORDER BY failed_at DESC LIMIT 100`,
+        [request.params.jobId]
+      );
+      return reply.send({ deadLetters: result.rows });
+    }
+  );
+
+  // POST /api/v1/jobs/:jobId/dead-letters/:dlqId/replay
+  app.post<{ Params: { jobId: string; dlqId: string } }>(
+    '/:jobId/dead-letters/:dlqId/replay',
+    { preHandler: authenticate },
+    async (request, reply) => {
+      const jobResult = await db.query<{
+        id: string; signing_secret: string; notify_url: string | null;
+        max_retries: number; timeout_ms: number;
+      }>(
+        'SELECT id, signing_secret, notify_url, max_retries, timeout_ms FROM jobs WHERE id = $1 AND user_id = $2',
+        [request.params.jobId, request.user!.userId]
+      );
+      if (!jobResult.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+
+      const dlqResult = await db.query(
+        'SELECT * FROM dead_letter_queue WHERE id = $1 AND job_id = $2 AND expires_at > NOW()',
+        [request.params.dlqId, request.params.jobId]
+      );
+      if (!dlqResult.rows[0]) return reply.code(404).send({ error: 'Dead letter not found or expired' });
+
+      const dlq = dlqResult.rows[0];
+      const job = jobResult.rows[0];
+
+      const execution = await runJob({
+        id: job.id,
+        endpoint_url: dlq.endpoint_url,
+        http_method: dlq.http_method,
+        headers: dlq.headers,
+        body: dlq.body,
+        notify_url: job.notify_url,
+        signing_secret: job.signing_secret,
+        max_retries: job.max_retries,
+        timeout_ms: job.timeout_ms,
+      });
+
+      await db.query(
+        'UPDATE dead_letter_queue SET replayed_at = NOW() WHERE id = $1',
+        [request.params.dlqId]
+      );
+
+      return reply.send({ execution, replayed: true });
+    }
+  );
+
   // GET /api/v1/admin/metrics — aggregate metrics for internal use
   // Protected by ADMIN_SECRET env var (checked as Bearer token or ?secret= query param)
   app.get('/admin/metrics', async (request, reply) => {

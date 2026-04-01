@@ -150,6 +150,50 @@ async function migrate(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_conversion_events_created_at ON conversion_events(created_at DESC);
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS delivery_attempts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        execution_id UUID NOT NULL REFERENCES job_executions(id) ON DELETE CASCADE,
+        job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+        attempt_number INT NOT NULL DEFAULT 1,
+        status TEXT NOT NULL CHECK (status IN ('success', 'failed', 'timeout')),
+        response_status INT,
+        response_body TEXT,
+        duration_ms INT,
+        error_message TEXT,
+        attempted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_delivery_attempts_execution_id ON delivery_attempts(execution_id);
+      CREATE INDEX IF NOT EXISTS idx_delivery_attempts_job_id ON delivery_attempts(job_id);
+      CREATE INDEX IF NOT EXISTS idx_delivery_attempts_attempted_at ON delivery_attempts(attempted_at DESC);
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS dead_letter_queue (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+        execution_id UUID REFERENCES job_executions(id) ON DELETE SET NULL,
+        endpoint_url TEXT NOT NULL,
+        http_method TEXT NOT NULL,
+        headers JSONB NOT NULL DEFAULT '{}',
+        body TEXT,
+        error_message TEXT,
+        attempt_count INT NOT NULL DEFAULT 0,
+        failed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '7 days',
+        replayed_at TIMESTAMPTZ
+      )
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_dlq_job_id ON dead_letter_queue(job_id);
+      CREATE INDEX IF NOT EXISTS idx_dlq_failed_at ON dead_letter_queue(failed_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_dlq_expires_at ON dead_letter_queue(expires_at);
+    `);
+
     await client.query('COMMIT');
     console.log('Migration complete');
   } catch (err) {

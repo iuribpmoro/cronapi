@@ -8,6 +8,7 @@ import { authRoutes, waitlistRoutes, adminRoutes } from './routes/auth';
 import { jobRoutes } from './routes/jobs';
 import { webhookRoutes } from './routes/webhooks';
 import { dashboardRoutes } from './routes/dashboard';
+import { templateRoutes } from './routes/templates';
 import { db } from './db/client';
 import { logRequest } from './lib/usageTracking';
 
@@ -61,6 +62,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(jobRoutes, { prefix: '/api/v1/jobs' });
+  await app.register(templateRoutes, { prefix: '/api/v1/templates' });
   await app.register(webhookRoutes, { prefix: '/webhooks' });
   await app.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });

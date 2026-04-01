@@ -244,7 +244,7 @@ function jobsListPage(jobs: any[], user: { email: string; plan: string }, flash?
   `, user);
 }
 
-function jobDetailPage(job: any, executions: any[], stats: any, user: { email: string; plan: string }, flash?: string) {
+function jobDetailPage(job: any, executions: any[], stats: any, user: { email: string; plan: string }, flash?: string, deliveryAttempts?: any[], dlqItems?: any[]) {
   const execRows = executions.length === 0
     ? `<tr><td colspan="5" style="padding:24px;text-align:center;color:#9ca3af;">No executions yet.</td></tr>`
     : executions.map(e => `
@@ -252,9 +252,46 @@ function jobDetailPage(job: any, executions: any[], stats: any, user: { email: s
         <td>${execStatusBadge(e.status)}</td>
         <td style="font-size:12px;color:#6b7280;">${fmt(e.started_at)}</td>
         <td style="font-size:12px;">${e.duration_ms != null ? e.duration_ms + 'ms' : '—'}</td>
-        <td style="font-size:12px;">${e.status_code ?? '—'}</td>
-        <td style="font-size:12px;color:#6b7280;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(e.error ?? e.response_body ?? '')}">${escapeHtml((e.error ?? e.response_body ?? '').substring(0, 120))}</td>
+        <td style="font-size:12px;">${e.response_status ?? '—'}</td>
+        <td style="font-size:12px;color:#6b7280;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(e.error_message ?? e.response_body ?? '')}">${escapeHtml((e.error_message ?? e.response_body ?? '').substring(0, 120))}</td>
       </tr>`).join('');
+
+  const deliveryRows = (deliveryAttempts && deliveryAttempts.length > 0)
+    ? deliveryAttempts.map(a => `
+      <tr>
+        <td style="font-size:12px;">${a.attempt_number}</td>
+        <td>${execStatusBadge(a.status)}</td>
+        <td style="font-size:12px;color:#6b7280;">${fmt(a.attempted_at)}</td>
+        <td style="font-size:12px;">${a.duration_ms != null ? a.duration_ms + 'ms' : '—'}</td>
+        <td style="font-size:12px;">${a.response_status ?? '—'}</td>
+        <td style="font-size:12px;color:#6b7280;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(a.error_message ?? a.response_body ?? '')}">${escapeHtml((a.error_message ?? a.response_body ?? '').substring(0, 100))}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af;">No delivery attempts recorded yet.</td></tr>`;
+
+  const dlqSection = (dlqItems && dlqItems.length > 0) ? `
+    <div class="section-title">Dead Letter Queue (${dlqItems.length} item${dlqItems.length !== 1 ? 's' : ''})</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>Failed At</th><th>Attempts</th><th>Error</th><th>Expires</th><th>Action</th></tr></thead>
+        <tbody>
+          ${dlqItems.map(d => `
+          <tr>
+            <td style="font-size:12px;color:#6b7280;">${fmt(d.failed_at)}</td>
+            <td style="font-size:12px;">${d.attempt_count}</td>
+            <td style="font-size:12px;color:#6b7280;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(d.error_message ?? '')}">${escapeHtml((d.error_message ?? '').substring(0, 80))}</td>
+            <td style="font-size:12px;color:#6b7280;">${fmt(d.expires_at)}</td>
+            <td>
+              ${d.replayed_at
+                ? `<span style="font-size:12px;color:#16a34a;">Replayed ${fmt(d.replayed_at)}</span>`
+                : `<form method="POST" action="/dashboard/jobs/${job.id}/dead-letters/${d.id}/replay" style="display:inline;">
+                     <button type="submit" class="btn btn-secondary btn-sm">Replay</button>
+                   </form>`
+              }
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : '';
 
   return layout(job.name, `
     ${flash ? `<div class="success-msg">${flash}</div>` : ''}
@@ -327,6 +364,16 @@ function jobDetailPage(job: any, executions: any[], stats: any, user: { email: s
         <tbody>${execRows}</tbody>
       </table>
     </div>
+
+    <div class="section-title">Delivery Attempt Log (last 30)</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table>
+        <thead><tr><th>#</th><th>Status</th><th>Timestamp</th><th>Duration</th><th>HTTP</th><th>Response</th></tr></thead>
+        <tbody>${deliveryRows}</tbody>
+      </table>
+    </div>
+
+    ${dlqSection}
   `, user);
 }
 
@@ -334,10 +381,45 @@ function jobFormPage(user: { email: string; plan: string }, job?: any, error?: s
   const isEdit = !!job;
   const v = (field: string, def = '') => job ? escapeHtml(String(job[field] ?? def)) : def;
 
+  const templatePicker = !isEdit ? `
+    <div class="card" style="max-width:680px;margin-bottom:12px;background:#f8f9ff;border:1px solid #e0e4ff;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">Start from template:</span>
+        <select id="templateSelect" onchange="applyTemplate(this.value)" style="flex:1;max-width:380px;">
+          <option value="">Choose a template...</option>
+        </select>
+      </div>
+    </div>
+    <script>
+      fetch('/api/v1/templates').then(r=>r.json()).then(d=>{
+        const sel = document.getElementById('templateSelect');
+        d.templates.forEach(t=>{
+          const opt = document.createElement('option');
+          opt.value = JSON.stringify(t);
+          opt.textContent = t.name + ' \u2014 ' + t.description;
+          sel.appendChild(opt);
+        });
+      }).catch(()=>{});
+      function applyTemplate(val) {
+        if (!val) return;
+        const t = JSON.parse(val);
+        document.getElementById('name').value = t.name || '';
+        document.getElementById('endpointUrl').value = t.endpointUrl || '';
+        document.getElementById('cronExpression').value = t.cronExpression || '';
+        const mSel = document.getElementById('httpMethod');
+        if (mSel) mSel.value = t.httpMethod || 'GET';
+        document.getElementById('headers').value = t.headers && Object.keys(t.headers).length ? JSON.stringify(t.headers, null, 2) : '';
+        document.getElementById('body').value = t.body || '';
+        document.getElementById('templateSelect').value = '';
+      }
+    </script>
+  ` : '';
+
   return layout(isEdit ? 'Edit Job' : 'New Job', `
     <a href="${isEdit ? `/dashboard/jobs/${job.id}` : '/dashboard'}" class="back-link">← ${isEdit ? 'Back to job' : 'Back to jobs'}</a>
     <h1>${isEdit ? 'Edit Job' : 'Create New Job'}</h1>
     ${error ? `<div class="error-msg">${error}</div>` : ''}
+    ${templatePicker}
     <div class="card" style="max-width:680px;">
       <form method="POST" action="${isEdit ? `/dashboard/jobs/${job.id}/edit` : '/dashboard/jobs'}">
         <div class="form-group">
@@ -799,7 +881,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     if (!jobResult.rows[0]) return reply.code(404).type('text/html').send(layout('Not Found', '<div class="empty-state"><p>Job not found.</p><a href="/dashboard">← Back</a></div>', user));
 
     const job = jobResult.rows[0];
-    const [exResult, statsResult] = await Promise.all([
+    const [exResult, statsResult, deliveryResult, dlqResult] = await Promise.all([
       db.query('SELECT * FROM job_executions WHERE job_id = $1 ORDER BY started_at DESC LIMIT 50', [job.id]),
       db.query<{
         total_24h: string; success_24h: string; failure_24h: string; avg_ms_24h: string | null;
@@ -817,6 +899,14 @@ export async function dashboardRoutes(app: FastifyInstance) {
         FROM job_executions WHERE job_id = $1`,
         [job.id]
       ),
+      db.query(
+        'SELECT * FROM delivery_attempts WHERE job_id = $1 ORDER BY attempted_at DESC LIMIT 30',
+        [job.id]
+      ).catch(() => ({ rows: [] })),
+      db.query(
+        'SELECT * FROM dead_letter_queue WHERE job_id = $1 AND expires_at > NOW() ORDER BY failed_at DESC LIMIT 20',
+        [job.id]
+      ).catch(() => ({ rows: [] })),
     ]);
 
     const r = statsResult.rows[0];
@@ -840,7 +930,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     };
 
     const flash = (request.query as any).flash;
-    reply.type('text/html').send(jobDetailPage(job, exResult.rows, stats, user, flash));
+    reply.type('text/html').send(jobDetailPage(job, exResult.rows, stats, user, flash, deliveryResult.rows, dlqResult.rows));
   }));
 
   // GET /dashboard/jobs/:jobId/edit
@@ -929,6 +1019,44 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const { jobId } = request.params as { jobId: string };
     await db.query('DELETE FROM jobs WHERE id = $1 AND user_id = $2', [jobId, user.userId]);
     reply.redirect('/dashboard/jobs?flash=Job+deleted');
+  }));
+
+  // POST /dashboard/jobs/:jobId/dead-letters/:dlqId/replay
+  app.post<{ Params: { jobId: string; dlqId: string } }>('/jobs/:jobId/dead-letters/:dlqId/replay', requireAuth(async (request, reply, user) => {
+    const { jobId, dlqId } = request.params as { jobId: string; dlqId: string };
+
+    const jobResult = await db.query<{
+      id: string; signing_secret: string; notify_url: string | null; max_retries: number; timeout_ms: number;
+    }>(
+      'SELECT id, signing_secret, notify_url, max_retries, timeout_ms FROM jobs WHERE id = $1 AND user_id = $2',
+      [jobId, user.userId]
+    );
+    if (!jobResult.rows[0]) return reply.code(404).send('Job not found');
+
+    const dlqResult = await db.query(
+      'SELECT * FROM dead_letter_queue WHERE id = $1 AND job_id = $2 AND expires_at > NOW() AND replayed_at IS NULL',
+      [dlqId, jobId]
+    );
+    if (!dlqResult.rows[0]) return reply.redirect(`/dashboard/jobs/${jobId}?flash=Dead+letter+not+found+or+already+replayed`);
+
+    const dlq = dlqResult.rows[0];
+    const job = jobResult.rows[0];
+
+    await runJob({
+      id: job.id,
+      endpoint_url: dlq.endpoint_url,
+      http_method: dlq.http_method,
+      headers: dlq.headers,
+      body: dlq.body,
+      notify_url: job.notify_url,
+      signing_secret: job.signing_secret,
+      max_retries: 0, // single replay attempt
+      timeout_ms: job.timeout_ms,
+    }).catch(() => {});
+
+    await db.query('UPDATE dead_letter_queue SET replayed_at = NOW() WHERE id = $1', [dlqId]);
+
+    reply.redirect(`/dashboard/jobs/${jobId}?flash=Dead+letter+replayed+successfully`);
   }));
 
   // ── onboarding ──────────────────────────────────────────────────────────────
