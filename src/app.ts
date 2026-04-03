@@ -88,29 +88,35 @@ export async function buildApp(): Promise<FastifyInstance> {
     };
   });
 
-  app.get('/status', async () => {
-    const [activeJobsResult, nextRunResult, lastErrorResult] = await Promise.all([
+  async function getSystemStatus() {
+    let dbStatus = 'ok';
+    try { await db.query('SELECT 1'); } catch { dbStatus = 'error'; }
+    const [activeJobsResult, nextRunResult, lastExecResult] = await Promise.all([
       db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs WHERE enabled = true'),
       db.query<{ next_run_at: Date }>(
         'SELECT next_run_at FROM jobs WHERE enabled = true AND next_run_at IS NOT NULL ORDER BY next_run_at ASC LIMIT 1'
       ),
-      db.query<{ job_id: string; status: string; error_message: string | null; started_at: Date }>(
-        `SELECT job_id, status, error_message, started_at
-         FROM job_executions
-         WHERE status IN ('failed', 'timeout')
-         ORDER BY started_at DESC LIMIT 1`
+      db.query<{ job_id: string; status: string; started_at: Date; finished_at: Date }>(
+        `SELECT job_id, status, started_at, finished_at FROM job_executions ORDER BY started_at DESC LIMIT 1`
       ),
     ]);
-    const lastError = lastErrorResult.rows[0] ?? null;
+    const lastExec = lastExecResult?.rows[0] ?? null;
     return {
+      status: dbStatus === 'ok' ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
       uptime: (Date.now() - appStartTime) / 1000,
-      activeJobs: parseInt(activeJobsResult.rows[0]?.count ?? '0', 10),
-      nextScheduledRun: nextRunResult.rows[0]?.next_run_at ?? null,
-      lastError: lastError
-        ? { jobId: lastError.job_id, status: lastError.status, message: lastError.error_message, at: lastError.started_at }
+      database: dbStatus,
+      scheduler: 'running',
+      activeJobs: parseInt(activeJobsResult?.rows[0]?.count ?? '0', 10),
+      nextScheduledRun: nextRunResult?.rows[0]?.next_run_at ?? null,
+      lastExecution: lastExec
+        ? { jobId: lastExec.job_id, status: lastExec.status, at: lastExec.finished_at ?? lastExec.started_at }
         : null,
     };
-  });
+  }
+
+  app.get('/status', async () => getSystemStatus());
+  app.get('/api/v1/status', async () => getSystemStatus());
 
   app.get('/api/v1/pricing', async () => ({
     plans: [

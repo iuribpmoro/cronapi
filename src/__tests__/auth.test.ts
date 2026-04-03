@@ -25,6 +25,7 @@ describe('POST /api/v1/auth/register', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
     app = await buildApp();
   });
 
@@ -95,6 +96,7 @@ describe('POST /api/v1/waitlist', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
     app = await buildApp();
   });
 

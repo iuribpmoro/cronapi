@@ -169,7 +169,9 @@ export async function jobRoutes(app: FastifyInstance) {
     }
 
     const interval = cronParser.parseExpression(cronExpression);
-    const minutesBetween = Math.round((interval.next().getTime() - Date.now()) / 60000);
+    const first = interval.next();
+    const second = interval.next();
+    const minutesBetween = Math.round((second.getTime() - first.getTime()) / 60000);
     if (minutesBetween < limits.minIntervalMinutes) {
       return reply.code(402).send({
         error: `Minimum interval for ${plan} plan is ${limits.minIntervalMinutes} minute(s). Upgrade for more frequent scheduling.`,

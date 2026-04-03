@@ -22,6 +22,7 @@ describe('GET /health', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
     app = await buildApp();
   });
 
@@ -60,6 +61,7 @@ describe('GET /status', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
     app = await buildApp();
   });
 
@@ -70,8 +72,10 @@ describe('GET /status', () => {
   it('returns active job count and next scheduled run', async () => {
     const nextRun = new Date('2026-04-01T00:00:00.000Z');
     mockQuery
+      .mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 } as any) // SELECT 1 (db health)
       .mockResolvedValueOnce({ rows: [{ count: '5' }], rowCount: 1 } as any)
-      .mockResolvedValueOnce({ rows: [{ next_run_at: nextRun }], rowCount: 1 } as any);
+      .mockResolvedValueOnce({ rows: [{ next_run_at: nextRun }], rowCount: 1 } as any)
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // lastExec
 
     const res = await app.inject({ method: 'GET', url: '/status' });
 
@@ -84,8 +88,10 @@ describe('GET /status', () => {
 
   it('returns zero jobs and null next run when no jobs exist', async () => {
     mockQuery
+      .mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 } as any) // SELECT 1 (db health)
       .mockResolvedValueOnce({ rows: [{ count: '0' }], rowCount: 1 } as any)
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any); // lastExec
 
     const res = await app.inject({ method: 'GET', url: '/status' });
 

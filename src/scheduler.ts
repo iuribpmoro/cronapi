@@ -43,6 +43,18 @@ export function startScheduler() {
     } catch (err: any) {
       logger.error('health_check_failed', { error: err.message });
     }
+
+    // Keep-alive: ping the external URL to prevent Render free-tier spin-down.
+    // Set KEEP_ALIVE_URL=https://cronapi.hakinsight.com/health in Render env vars.
+    const keepAliveUrl = process.env.KEEP_ALIVE_URL;
+    if (keepAliveUrl) {
+      try {
+        await fetch(keepAliveUrl, { method: 'GET', signal: AbortSignal.timeout(10_000) });
+        logger.info('keep_alive_ping_ok', { url: keepAliveUrl });
+      } catch (err: any) {
+        logger.warn('keep_alive_ping_failed', { url: keepAliveUrl, error: err.message });
+      }
+    }
   });
 }
 

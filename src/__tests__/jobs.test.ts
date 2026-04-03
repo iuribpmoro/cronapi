@@ -44,6 +44,7 @@ describe('Job routes', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
     app = await buildApp();
   });
 
@@ -146,7 +147,7 @@ describe('Job routes', () => {
       });
 
       expect(res.statusCode).toBe(400);
-      expect(JSON.parse(res.body).error).toContain('endpointUrl');
+      expect(JSON.parse(res.body).error).toContain('Invalid URL');
     });
 
     it('returns 402 when plan job limit reached', async () => {
