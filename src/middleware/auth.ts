@@ -18,17 +18,21 @@ declare module 'fastify' {
   }
 }
 
+function err(code: string, message: string, details: unknown = null) {
+  return { error: { code, message, details } };
+}
+
 export async function authenticate(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    reply.code(401).send({ error: 'Missing or invalid Authorization header. Use: Bearer <api_key>' });
+    reply.code(401).send(err('UNAUTHORIZED', 'Missing or invalid Authorization header. Use: Bearer <api_key>'));
     return;
   }
 
   const raw = authHeader.slice(7);
   const validated = await validateApiKey(raw);
   if (!validated) {
-    reply.code(401).send({ error: 'Invalid or revoked API key' });
+    reply.code(401).send(err('UNAUTHORIZED', 'Invalid or revoked API key'));
     return;
   }
 
@@ -38,7 +42,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   );
 
   if (userResult.rows.length === 0) {
-    reply.code(401).send({ error: 'User not found' });
+    reply.code(401).send(err('UNAUTHORIZED', 'User not found'));
     return;
   }
 
@@ -52,7 +56,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
       .code(429)
       .header('Retry-After', String(retryAfter))
       .send({
-        error: `Rate limit exceeded. ${plan} plan allows ${limits.rateLimit} requests/minute.`,
+        ...err('RATE_LIMITED', `Rate limit exceeded. ${plan} plan allows ${limits.rateLimit} requests/minute.`),
         retryAfterSeconds: retryAfter,
       });
     return;

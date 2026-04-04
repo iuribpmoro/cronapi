@@ -4,17 +4,21 @@ import { generateApiKey, listApiKeys, revokeApiKey } from '../lib/apiKeys';
 import { authenticate } from '../middleware/auth';
 import { logConversionEvent } from '../lib/usageTracking';
 
+function err(code: string, message: string, details: unknown = null) {
+  return { error: { code, message, details } };
+}
+
 export async function authRoutes(app: FastifyInstance) {
   // POST /api/v1/auth/register
   app.post<{ Body: { email: string } }>('/register', async (request, reply) => {
     const { email } = request.body ?? {};
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return reply.code(400).send({ error: 'Valid email required' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'Valid email required'));
     }
 
     const existing = await db.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     if (existing.rows.length > 0) {
-      return reply.code(409).send({ error: 'Email already registered' });
+      return reply.code(409).send(err('CONFLICT', 'Email already registered'));
     }
 
     const userResult = await db.query<{ id: string }>(
@@ -56,7 +60,7 @@ export async function authRoutes(app: FastifyInstance) {
   // DELETE /api/v1/auth/keys/:keyId
   app.delete<{ Params: { keyId: string } }>('/keys/:keyId', { preHandler: authenticate }, async (request, reply) => {
     const ok = await revokeApiKey(request.params.keyId, request.user!.userId);
-    if (!ok) return reply.code(404).send({ error: 'Key not found' });
+    if (!ok) return reply.code(404).send(err('NOT_FOUND', 'Key not found'));
     return reply.send({ message: 'API key revoked' });
   });
 
@@ -72,16 +76,16 @@ export async function waitlistRoutes(app: FastifyInstance) {
   app.post<{ Body: { email: string } }>('/', async (request, reply) => {
     const { email } = request.body ?? {};
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return reply.code(400).send({ error: 'Valid email required' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'Valid email required'));
     }
     try {
       await db.query('INSERT INTO waitlist (email) VALUES ($1)', [email.toLowerCase()]);
       return reply.code(201).send({ message: 'Added to waitlist!' });
-    } catch (err: any) {
-      if (err.code === '23505') {
+    } catch (error: any) {
+      if (error.code === '23505') {
         return reply.send({ message: "You're already on the list." });
       }
-      throw err;
+      throw error;
     }
   });
 }
@@ -91,7 +95,7 @@ export async function adminRoutes(app: FastifyInstance) {
   function requireAdminSecret(request: any, reply: any) {
     const secret = process.env.ADMIN_SECRET;
     if (!secret || request.headers['x-admin-secret'] !== secret) {
-      reply.code(401).send({ error: 'Unauthorized' });
+      reply.code(401).send(err('UNAUTHORIZED', 'Unauthorized'));
       return false;
     }
     return true;

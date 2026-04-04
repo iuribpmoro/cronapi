@@ -76,7 +76,7 @@ function validateEndpointUrl(raw: string): { ok: true } | { ok: false; reason: s
   try {
     parsed = new URL(raw);
   } catch {
-    return { ok: false, reason: 'Invalid URL' };
+    return { ok: false, reason: 'Invalid endpointUrl: must be a valid http/https URL' };
   }
 
   if (!['http:', 'https:'].includes(parsed.protocol)) {
@@ -96,6 +96,10 @@ function validateEndpointUrl(raw: string): { ok: true } | { ok: false; reason: s
 function nextRunAt(expr: string): Date {
   const interval = cronParser.parseExpression(expr);
   return interval.next().toDate();
+}
+
+function err(code: string, message: string, details: unknown = null) {
+  return { error: { code, message, details } };
 }
 
 export async function jobRoutes(app: FastifyInstance) {
@@ -125,34 +129,34 @@ export async function jobRoutes(app: FastifyInstance) {
     const { name, endpointUrl, cronExpression, httpMethod = 'GET', headers = {}, body, notifyUrl, maxRetries = 3, timeoutMs = 30_000 } = request.body ?? {};
 
     if (!name || !endpointUrl || !cronExpression) {
-      return reply.code(400).send({ error: 'name, endpointUrl, and cronExpression are required' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'name, endpointUrl, and cronExpression are required'));
     }
 
     if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(httpMethod.toUpperCase())) {
-      return reply.code(400).send({ error: 'Invalid httpMethod' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'Invalid httpMethod'));
     }
 
     const urlCheck = validateEndpointUrl(endpointUrl);
     if (!urlCheck.ok) {
-      return reply.code(400).send({ error: urlCheck.reason });
+      return reply.code(400).send(err('VALIDATION_ERROR', urlCheck.reason));
     }
 
     if (notifyUrl) {
       try { new URL(notifyUrl); } catch {
-        return reply.code(400).send({ error: 'Invalid notifyUrl' });
+        return reply.code(400).send(err('VALIDATION_ERROR', 'Invalid notifyUrl'));
       }
     }
 
     if (!validateCron(cronExpression)) {
-      return reply.code(400).send({ error: 'Invalid cron expression' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'Invalid cron expression'));
     }
 
     if (typeof maxRetries !== 'number' || maxRetries < 0 || maxRetries > 5) {
-      return reply.code(400).send({ error: 'maxRetries must be between 0 and 5' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'maxRetries must be between 0 and 5'));
     }
 
     if (typeof timeoutMs !== 'number' || timeoutMs < 1000 || timeoutMs > 120_000) {
-      return reply.code(400).send({ error: 'timeoutMs must be between 1000 and 120000' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'timeoutMs must be between 1000 and 120000'));
     }
 
     const { userId, plan } = request.user!;
@@ -163,9 +167,7 @@ export async function jobRoutes(app: FastifyInstance) {
       [userId]
     );
     if (parseInt(countResult.rows[0].count) >= limits.maxJobs) {
-      return reply.code(402).send({
-        error: `Plan limit reached. ${plan} plan allows ${limits.maxJobs} jobs. Upgrade at /pricing`,
-      });
+      return reply.code(402).send(err('PLAN_LIMIT_REACHED', `Plan limit reached. ${plan} plan allows ${limits.maxJobs} jobs. Upgrade at /pricing`));
     }
 
     const interval = cronParser.parseExpression(cronExpression);
@@ -173,9 +175,7 @@ export async function jobRoutes(app: FastifyInstance) {
     const second = interval.next();
     const minutesBetween = Math.round((second.getTime() - first.getTime()) / 60000);
     if (minutesBetween < limits.minIntervalMinutes) {
-      return reply.code(402).send({
-        error: `Minimum interval for ${plan} plan is ${limits.minIntervalMinutes} minute(s). Upgrade for more frequent scheduling.`,
-      });
+      return reply.code(402).send(err('PLAN_LIMIT_REACHED', `Minimum interval for ${plan} plan is ${limits.minIntervalMinutes} minute(s). Upgrade for more frequent scheduling.`));
     }
 
     const result = await db.query<Job>(
@@ -200,7 +200,7 @@ export async function jobRoutes(app: FastifyInstance) {
       'SELECT * FROM jobs WHERE id = $1 AND user_id = $2',
       [request.params.jobId, request.user!.userId]
     );
-    if (!result.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+    if (!result.rows[0]) return reply.code(404).send(err('NOT_FOUND', 'Job not found'));
     return reply.send({ job: toJobResponse(result.rows[0]) });
   });
 
@@ -213,7 +213,7 @@ export async function jobRoutes(app: FastifyInstance) {
       'SELECT * FROM jobs WHERE id = $1 AND user_id = $2',
       [request.params.jobId, request.user!.userId]
     );
-    if (!existing.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+    if (!existing.rows[0]) return reply.code(404).send(err('NOT_FOUND', 'Job not found'));
 
     const job = existing.rows[0];
     const updates = request.body ?? {};
@@ -221,23 +221,23 @@ export async function jobRoutes(app: FastifyInstance) {
     if (updates.endpointUrl !== undefined) {
       const urlCheck = validateEndpointUrl(updates.endpointUrl);
       if (!urlCheck.ok) {
-        return reply.code(400).send({ error: urlCheck.reason });
+        return reply.code(400).send(err('VALIDATION_ERROR', urlCheck.reason));
       }
     }
     if (updates.notifyUrl) {
       try { new URL(updates.notifyUrl); } catch {
-        return reply.code(400).send({ error: 'Invalid notifyUrl' });
+        return reply.code(400).send(err('VALIDATION_ERROR', 'Invalid notifyUrl'));
       }
     }
     if (updates.cronExpression !== undefined && !validateCron(updates.cronExpression)) {
-      return reply.code(400).send({ error: 'Invalid cron expression' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'Invalid cron expression'));
     }
     if (updates.maxRetries !== undefined && (updates.maxRetries < 0 || updates.maxRetries > 5)) {
-      return reply.code(400).send({ error: 'maxRetries must be between 0 and 5' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'maxRetries must be between 0 and 5'));
     }
 
     if (updates.timeoutMs !== undefined && (updates.timeoutMs < 1000 || updates.timeoutMs > 120_000)) {
-      return reply.code(400).send({ error: 'timeoutMs must be between 1000 and 120000' });
+      return reply.code(400).send(err('VALIDATION_ERROR', 'timeoutMs must be between 1000 and 120000'));
     }
 
     const cronExpr = updates.cronExpression ?? job.cron_expression;
@@ -273,7 +273,7 @@ export async function jobRoutes(app: FastifyInstance) {
       'DELETE FROM jobs WHERE id = $1 AND user_id = $2 RETURNING id',
       [request.params.jobId, request.user!.userId]
     );
-    if (!result.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+    if (!result.rows[0]) return reply.code(404).send(err('NOT_FOUND', 'Job not found'));
     return reply.send({ message: 'Job deleted' });
   });
 
@@ -286,7 +286,7 @@ export async function jobRoutes(app: FastifyInstance) {
         request.params.jobId,
         request.user!.userId,
       ]);
-      if (!job.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+      if (!job.rows[0]) return reply.code(404).send(err('NOT_FOUND', 'Job not found'));
 
       const limit = Math.min(parseInt(request.query.limit ?? '50'), 100);
       const { cursor } = request.query;
@@ -320,7 +320,7 @@ export async function jobRoutes(app: FastifyInstance) {
         request.params.jobId,
         request.user!.userId,
       ]);
-      if (!job.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+      if (!job.rows[0]) return reply.code(404).send(err('NOT_FOUND', 'Job not found'));
 
       const result = await db.query<{
         total_24h: string; success_24h: string; failure_24h: string; avg_ms_24h: string | null;
@@ -378,7 +378,7 @@ export async function jobRoutes(app: FastifyInstance) {
         'SELECT id, endpoint_url, http_method, headers, body, notify_url, max_retries, signing_secret, timeout_ms FROM jobs WHERE id = $1 AND user_id = $2',
         [request.params.jobId, request.user!.userId]
       );
-      if (!jobResult.rows[0]) return reply.code(404).send({ error: 'Job not found' });
+      if (!jobResult.rows[0]) return reply.code(404).send(err('NOT_FOUND', 'Job not found'));
 
       const execution = await runJob(jobResult.rows[0]);
       return reply.code(200).send({ execution });

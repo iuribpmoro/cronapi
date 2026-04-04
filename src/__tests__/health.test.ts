@@ -12,6 +12,13 @@ vi.mock('../lib/apiKeys', () => ({
   revokeApiKey: vi.fn(),
 }));
 
+vi.mock('../lib/usageTracking', () => ({
+  logConversionEvent: vi.fn(),
+  logRequest: vi.fn(),
+  trackUsage: vi.fn(),
+  getUsageToday: vi.fn(),
+}));
+
 import { db } from '../db/client';
 import { buildApp } from '../app';
 
@@ -42,6 +49,7 @@ describe('GET /health', () => {
     expect(body.scheduler).toBe('running');
     expect(typeof body.uptime).toBe('number');
     expect(typeof body.timestamp).toBe('string');
+    expect(res.headers['x-request-id']).toBeDefined();
   });
 
   it('returns degraded when DB is unavailable', async () => {
@@ -99,5 +107,51 @@ describe('GET /status', () => {
     const body = JSON.parse(res.body);
     expect(body.activeJobs).toBe(0);
     expect(body.nextScheduledRun).toBeNull();
+  });
+
+  it('includes last error when a job has failed', async () => {
+    const lastError = {
+      job_id: 'job-abc',
+      status: 'failed',
+      error_message: 'Connection timeout',
+      started_at: new Date('2026-04-01T00:00:00.000Z'),
+    };
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ count: '3' }], rowCount: 1 } as any)
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 } as any)
+      .mockResolvedValueOnce({ rows: [lastError], rowCount: 1 } as any);
+
+    const res = await app.inject({ method: 'GET', url: '/status' });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.lastError).not.toBeNull();
+    expect(body.lastError.jobId).toBe('job-abc');
+    expect(body.lastError.status).toBe('failed');
+    expect(body.lastError.message).toBe('Connection timeout');
+  });
+});
+
+describe('GET /api/v1/pricing', () => {
+  let app: FastifyInstance;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    app = await buildApp();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('returns plan pricing info', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/pricing' });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.plans).toHaveLength(3);
+    expect(body.plans[0].name).toBe('free');
+    expect(body.plans[1].name).toBe('indie');
+    expect(body.plans[2].name).toBe('pro');
   });
 });

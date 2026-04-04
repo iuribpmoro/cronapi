@@ -3,6 +3,8 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import staticFiles from '@fastify/static';
 import cookie from '@fastify/cookie';
+import formbody from '@fastify/formbody';
+import { randomUUID } from 'crypto';
 import path from 'path';
 import { authRoutes, waitlistRoutes, adminRoutes } from './routes/auth';
 import { jobRoutes } from './routes/jobs';
@@ -36,6 +38,34 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(cookie);
+  await app.register(formbody);
+
+  // Attach a unique request ID to every request and response
+  app.addHook('onRequest', (request, reply, done) => {
+    const requestId = randomUUID();
+    (request as any).requestId = requestId;
+    reply.header('x-request-id', requestId);
+    (request as any)[kStartTime] = Date.now();
+    done();
+  });
+
+  // Global error handler — normalizes all errors to structured format
+  app.setErrorHandler((error, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+    const code = statusCode === 429 ? 'RATE_LIMITED'
+      : statusCode === 401 ? 'UNAUTHORIZED'
+      : statusCode === 403 ? 'FORBIDDEN'
+      : statusCode === 404 ? 'NOT_FOUND'
+      : statusCode >= 500 ? 'INTERNAL_ERROR'
+      : 'REQUEST_ERROR';
+    reply.code(statusCode).send({
+      error: {
+        code,
+        message: statusCode >= 500 ? 'An internal error occurred' : (error.message ?? 'Request failed'),
+        details: null,
+      },
+    });
+  });
 
   if (process.env.NODE_ENV !== 'test') {
     await app.register(staticFiles, {
@@ -52,11 +82,6 @@ export async function buildApp(): Promise<FastifyInstance> {
       const endpoint = request.routerPath ?? request.url;
       logRequest(request.user.keyId, request.method, endpoint, reply.statusCode, durationMs);
     }
-    done();
-  });
-
-  app.addHook('onRequest', (request, reply, done) => {
-    (request as any)[kStartTime] = Date.now();
     done();
   });
 
