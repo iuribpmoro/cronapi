@@ -29,6 +29,28 @@ export function startScheduler() {
     }
   });
 
+  // Daily at 02:00 UTC: database snapshot summary (logical backup indicator)
+  // Note: Render free-tier Postgres does not include pg_dump from the app container.
+  // This cron logs a structured row-count snapshot so data loss is detectable.
+  // For automated backups, configure Render managed backups (paid) or set
+  // DATABASE_BACKUP_URL for a custom pg_dump export job.
+  cron.schedule('0 2 * * *', async () => {
+    try {
+      const [users, jobs, executions] = await Promise.all([
+        db.query<{ count: string }>('SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL'),
+        db.query<{ count: string }>('SELECT COUNT(*) as count FROM jobs'),
+        db.query<{ count: string }>('SELECT COUNT(*) as count FROM job_executions'),
+      ]);
+      logger.info('daily_backup_snapshot', {
+        activeUsers: parseInt(users.rows[0].count, 10),
+        totalJobs: parseInt(jobs.rows[0].count, 10),
+        totalExecutions: parseInt(executions.rows[0].count, 10),
+      });
+    } catch (e: any) {
+      logger.error('daily_backup_snapshot_failed', { error: e.message });
+    }
+  });
+
   // Every 5 minutes: self-health check (dogfooding our own /health endpoint)
   cron.schedule('*/5 * * * *', async () => {
     const port = process.env.PORT ?? '3000';

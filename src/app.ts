@@ -11,6 +11,7 @@ import { jobRoutes } from './routes/jobs';
 import { webhookRoutes } from './routes/webhooks';
 import { dashboardRoutes } from './routes/dashboard';
 import { templateRoutes } from './routes/templates';
+import { accountRoutes } from './routes/account';
 import { db } from './db/client';
 import { logRequest } from './lib/usageTracking';
 
@@ -92,6 +93,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(waitlistRoutes, { prefix: '/api/v1/waitlist' });
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });
   await app.register(dashboardRoutes, { prefix: '/dashboard' });
+  await app.register(accountRoutes, { prefix: '/api/v1/account' });
 
   app.get('/api/docs', async (request, reply) => {
     return reply.redirect('/docs.html');

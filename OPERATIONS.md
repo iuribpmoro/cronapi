@@ -102,3 +102,64 @@ See [MONA-31](/MONA/issues/MONA-31) — requires Stripe webhook endpoint to be r
 - Every push to `main` triggers an automatic redeploy on Render (zero-downtime rolling restart).
 - Monitor the deploy in Render Dashboard → **Deploys** tab.
 - DB migrations run automatically on startup via `npm run migrate` (see `render.yaml`).
+
+---
+
+## Database Backups
+
+### Current setup (free tier)
+
+Render's free-tier Postgres does **not** include automated backups. The scheduler runs a daily snapshot at **02:00 UTC** that logs row counts for users, jobs, and executions:
+
+```json
+{"msg":"daily_backup_snapshot","activeUsers":42,"totalJobs":310,"totalExecutions":12840}
+```
+
+This snapshot detects data loss but does **not** produce a restorable dump.
+
+### Upgrading to real backups
+
+**Option A — Render managed backups (recommended):**
+Upgrade the `cronapi-db` Postgres instance to a paid plan in the Render dashboard. Render will then take daily point-in-time snapshots automatically.
+
+**Option B — External pg_dump:**
+The app container (`node:20-alpine`) does not include `pg_dump`. To run dumps externally:
+1. Add a separate cron service on Render (or a GitHub Action) that has `postgresql-client` installed.
+2. Set `DATABASE_URL` and dump to S3/Backblaze B2/etc. with `pg_dump $DATABASE_URL | gzip | aws s3 cp - s3://bucket/backup-$(date +%F).sql.gz`.
+
+### Migration version tracking
+
+The `schema_migrations` table records applied migration versions. Inspect with:
+
+```sql
+SELECT * FROM schema_migrations ORDER BY applied_at;
+```
+
+---
+
+## GDPR & Data Lifecycle
+
+### User data export (data portability)
+
+Users can download all their data via the API:
+
+```
+GET /api/v1/account/export
+Authorization: Bearer <api_key>
+```
+
+Returns JSON with: profile, API keys, all jobs, and full execution history.
+
+### Account deletion (right to erasure)
+
+```
+DELETE /api/v1/account
+Authorization: Bearer <api_key>
+```
+
+- All API keys are immediately revoked (requests are rejected from that point on).
+- All cron jobs are immediately disabled.
+- The user record is soft-deleted (`deleted_at` set). All API calls with that user's keys will return 401.
+- Hard-deletion of associated data is planned within 30 days of soft-delete.
+
+**Note:** Execution history and conversion events are preserved for 30 days after deletion for audit/fraud purposes, then purged. If a user disputes a charge, this window allows investigation.

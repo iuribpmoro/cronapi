@@ -37,7 +37,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   }
 
   const userResult = await db.query<{ email: string; plan: string }>(
-    'SELECT email, plan FROM users WHERE id = $1',
+    'SELECT email, plan FROM users WHERE id = $1 AND deleted_at IS NULL',
     [validated.userId]
   );
 

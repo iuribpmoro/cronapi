@@ -194,6 +194,22 @@ async function migrate(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_dlq_expires_at ON dead_letter_queue(expires_at);
     `);
 
+    // GDPR: soft-delete support for users
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`);
+
+    // Migration version tracking
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      INSERT INTO schema_migrations (version) VALUES ('20260404_gdpr_softdelete')
+      ON CONFLICT (version) DO NOTHING
+    `);
+
     await client.query('COMMIT');
     console.log('Migration complete');
   } catch (err) {
