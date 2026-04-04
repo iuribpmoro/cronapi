@@ -123,6 +123,9 @@ function layout(title: string, body: string, user?: { email: string; plan: strin
     .filter-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
     .filter-row select, .filter-row input { width: auto; }
     .truncate { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    footer { border-top: 1px solid #e5e5e5; margin-top: 48px; padding: 16px 0; text-align: center; font-size: 11px; color: #9ca3af; }
+    footer a { color: #9ca3af; margin: 0 8px; }
+    footer a:hover { color: #6b7280; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -140,6 +143,13 @@ function layout(title: string, body: string, user?: { email: string; plan: strin
   <div class="container">
     ${body}
   </div>
+  <footer>
+    <span>&copy; 2025 CronAPI</span>
+    <a href="/legal/privacy-policy.md">Privacy Policy</a>
+    <a href="/legal/terms-of-service.md">Terms of Service</a>
+    <a href="/legal/cookie-notice.md">Cookie Notice</a>
+    <a href="mailto:hello@cronapi.hakinsight.com">Contact</a>
+  </footer>
 </body>
 </html>`;
 }
